@@ -13,7 +13,9 @@ To build a project, follow [the official nRF Connect SDK guide](https://develope
 - Create project directory
 - Inside project directory, run command ```west init -m https://github.com/Embla-Flatlandsmo/wheelchair-ergometer-game-controller.git```. This will set up the west configurations for the project directory.
 - In the same directory, run ```west update```. This will download the project files, nRF Connect SDK v1.9.0, and their dependencies.
+- Run ```west zephyr-export``` so we can successfully build applications.
 - Navigate to folder containing firmware (`wheelchair-ergometer-game-controller`) and use west commands for building and flashing the firmware as described in the [developer guide](https://developer.nordicsemi.com/nRF_Connect_SDK/doc/2.0.2/zephyr/guides/west/build-flash-debug.html#west-build-flash-debug).  
+- 
 <!-- 
 - Navigate to folder containing firmware for the microcontroller you want to work with (```./balancing_robot_firmware/<MCU NAME>```) and use west commands for building and flashing the firmware as described in the [developer guide](https://developer.nordicsemi.com/nRF_Connect_SDK/doc/1.9.0/zephyr/guides/west/build-flash-debug.html#west-build-flash-debug). 
 -->
