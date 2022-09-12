@@ -442,7 +442,7 @@ static void gamepad_movement_send(uint8_t val)
 		// buffer[2] = (y_buff[1] << 4) | (y_buff[0] >> 4);
 		buffer[0] = val;
 		buffer[1] = val;
-		printk("Sending movement: x=%d, y=%d", val, val);
+		printk("Sending movement: x=%d, y=%d\n", val, val);
 		
 
 		bt_hids_inp_rep_send(&hids_obj, conn_mode[i].conn,
@@ -680,7 +680,7 @@ void main(void)
 			printk("Failed to register authorization callbacks.\n");
 			return;
 		}
-
+		
 		err = bt_conn_auth_info_cb_register(&conn_auth_info_callbacks);
 		if (err) {
 			printk("Failed to register authorization info callbacks.\n");
