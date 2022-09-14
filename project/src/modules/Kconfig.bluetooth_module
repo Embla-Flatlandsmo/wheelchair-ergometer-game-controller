@@ -10,7 +10,10 @@ menuconfig BLE_MODULE
 
 if BLE_MODULE
 
-# TODO
+config BLE_THREAD_STACK_SIZE
+	int "BLE module thread stack size"
+	default 1280
+
 
 endif # BLE_MODULE
 
