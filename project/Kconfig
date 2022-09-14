@@ -1,0 +1,37 @@
+#
+# Copyright (c) 2021 Nordic Semiconductor ASA
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+# Asset Tracker v2 requires UART_INTERRUPT_DRIVEN to be enabled when SERIAL is used in order to
+# receive AT Commands.
+config UART_INTERRUPT_DRIVEN
+	default y if SERIAL
+
+# Asset Tracker v2 requires the default logging mode as LOG_MODE_IMMEDIATE because
+# a) LOG_MODE_DEFERRED does not print floating point numbers.
+#	 See : https://github.com/zephyrproject-rtos/zephyr/issues/18351
+# b) Using LOG2_MODE_DEFERRED results in missing logs in certain situations. Ref: NCSIDB-630
+choice LOG_MODE
+	default LOG_MODE_IMMEDIATE
+endchoice
+
+menu "Asset Tracker v2"
+
+rsource "src/modules/Kconfig.modules_common"
+rsource "src/modules/Kconfig.app_module"
+rsource "src/modules/Kconfig.bluetooth_module"
+rsource "src/modules/Kconfig.qdec_module"
+
+rsource "src/events/Kconfig"
+
+endmenu
+
+menu "Zephyr Kernel"
+source "Kconfig.zephyr"
+endmenu
+
+module = APPLICATION_MODULE
+module-str = Application module
+source "subsys/logging/Kconfig.template.log_config"

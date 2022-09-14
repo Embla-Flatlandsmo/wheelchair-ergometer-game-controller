@@ -1,0 +1,16 @@
+menuconfig QDEC_MODULE
+	bool "Quadrature decoder module"
+	default y
+
+if QDEC_MODULE
+
+config QDEC_THREAD_STACK_SIZE
+	int "QDEC module thread stack size"
+	default 1280
+
+
+endif # QDEC_MODULE
+
+module = QDEC_MODULE
+module-str = QDEC module
+source "subsys/logging/Kconfig.template.log_config"

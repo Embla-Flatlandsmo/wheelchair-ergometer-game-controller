@@ -1,0 +1,19 @@
+#
+# Copyright (c) 2021 Nordic Semiconductor
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+menuconfig BLE_MODULE
+	bool "BLE module"
+	default y
+
+if BLE_MODULE
+
+# TODO
+
+endif # BLE_MODULE
+
+module = BLE_MODULE
+module-str = BLE module
+source "subsys/logging/Kconfig.template.log_config"
