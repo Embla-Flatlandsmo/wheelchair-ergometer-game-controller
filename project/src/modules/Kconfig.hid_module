@@ -1,0 +1,22 @@
+#
+# Copyright (c) 2021 Nordic Semiconductor
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+menuconfig HID_MODULE
+	bool "HID module"
+	default y
+
+if HID_MODULE
+
+config HID_THREAD_STACK_SIZE
+	int "HID module thread stack size"
+	default 1280
+
+
+endif # HID_MODULE
+
+module = HID_MODULE
+module-str = HID module
+source "subsys/logging/Kconfig.template.log_config"

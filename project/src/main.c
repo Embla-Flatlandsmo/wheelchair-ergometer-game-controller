@@ -18,9 +18,5 @@ void main(void)
 		LOG_ERR("Application Event Manager not initialized");
 	} else {
 		module_set_state(MODULE_STATE_READY);
-		// struct config_event *event = new_config_event();
-
-		// event->init_value1 = INIT_VALUE1;
-		// APP_EVENT_SUBMIT(event);
 	}
 }

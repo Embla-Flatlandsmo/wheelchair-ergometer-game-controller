@@ -33,7 +33,6 @@ zephyr_include_directories(
 
 # Include source directory
 target_include_directories(app PRIVATE src)
-# target_include_directories(app PRIVATE configuration/${BOARD}/)
 
 # Application directories
 add_subdirectory(src/modules)

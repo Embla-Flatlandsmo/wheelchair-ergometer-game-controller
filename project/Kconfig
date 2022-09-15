@@ -23,6 +23,7 @@ rsource "src/modules/Kconfig.modules_common"
 rsource "src/modules/Kconfig.app_module"
 rsource "src/modules/Kconfig.bluetooth_module"
 rsource "src/modules/Kconfig.qdec_module"
+rsource "src/modules/Kconfig.hid_module"
 
 rsource "src/events/Kconfig"
 
