@@ -16,6 +16,7 @@
 
 #include <caf/events/ble_common_event.h>
 #include "hid_report_desc.h"
+#include "events/qdec_module_event.h"
 
 #define MODULE hid_module
 #include <caf/events/module_state_event.h>
@@ -28,7 +29,7 @@ LOG_MODULE_REGISTER(MODULE, CONFIG_HID_MODULE_LOG_LEVEL);
 /* Number of input reports in this application. */
 #define INPUT_REPORT_COUNT 1
 /* Length of Game Pad Input Report containing movement data. */
-#define INPUT_REP_MOVEMENT_NUM_BYTES 4
+#define INPUT_REP_MOVEMENT_NUM_BYTES 2
 /* Index of Game pad Input Report containing movement data. */
 #define INPUT_REP_MOVEMENT_INDEX 0
 /* Id of reference to Game pad Input Report containing movement data. */
@@ -37,6 +38,28 @@ LOG_MODULE_REGISTER(MODULE, CONFIG_HID_MODULE_LOG_LEVEL);
 /* HIDS instance. */
 BT_HIDS_DEF(hids_obj,
             INPUT_REP_MOVEMENT_NUM_BYTES);
+
+
+static struct conn_mode {
+	struct bt_conn *conn;
+	bool in_boot_mode;
+} conn_mode[CONFIG_BT_HIDS_MAX_CLIENT_COUNT];
+
+static void insert_conn_object(struct bt_conn *conn)
+{
+	for (size_t i = 0; i < CONFIG_BT_HIDS_MAX_CLIENT_COUNT; i++) {
+		if (!conn_mode[i].conn) {
+			conn_mode[i].conn = conn;
+			conn_mode[i].in_boot_mode = false;
+
+			return;
+		}
+	}
+
+	printk("Connection object could not be inserted %p\n", conn);
+}
+
+
 
 static int module_init(void)
 {
@@ -56,86 +79,64 @@ static int module_init(void)
     struct bt_hids_inp_rep *input_report =
         &hids_init_param.inp_rep_group_init.reports[0];
 
+    input_report->size = INPUT_REP_MOVEMENT_NUM_BYTES;
+	input_report->id = INPUT_REP_REF_MOVEMENT_ID;
+	input_report->rep_mask = NULL;
+	hids_init_param.inp_rep_group_init.cnt++;
+	// hids_init_param.pm_evt_handler = hids_pm_evt_handler;
     return bt_hids_init(&hids_obj, &hids_init_param);
 }
 
-static void send_hid_report(const struct hid_report_event *event)
+static void send_hid_report(const struct qdec_module_event *event)
 {
-    // static void (*const report_sent_cb[REPORT_ID_COUNT])(struct bt_conn * conn, void *user_data) = {
-    //     [REPORT_ID_MOUSE] = mouse_report_sent_cb,
-    //     [REPORT_ID_KEYBOARD_KEYS] = keyboard_keys_report_sent_cb,
-    //     [REPORT_ID_SYSTEM_CTRL] = system_ctrl_report_sent_cb,
-    //     [REPORT_ID_CONSUMER_CTRL] = consumer_ctrl_report_sent_cb,
-    //     [REPORT_ID_BOOT_MOUSE] = boot_mouse_report_sent_cb,
-    //     [REPORT_ID_BOOT_KEYBOARD] = boot_keyboard_report_sent_cb,
-    // };
-
-    if (!cur_conn || (cur_conn != event->subscriber))
-    {
-        /* It's not us */
+    if (event->type != QDEC_EVT_DATA_SEND) {
         return;
     }
+    for (size_t i = 0; i < CONFIG_BT_HIDS_MAX_CLIENT_COUNT; i++) {
 
-    // __ASSERT_NO_MSG(event->dyndata.size > 0);
+		if (!conn_mode[i].conn) {
+			continue;
+		}
+        
+        uint8_t buffer[2];
+        buffer[0] = event->data.rot_speed_val;
+        buffer[1] = event->data.rot_speed_val;
+        int err;
+        err = bt_hids_inp_rep_send(&hids_obj, conn_mode[i].conn,
+                        INPUT_REP_MOVEMENT_INDEX,
+                        buffer, sizeof(buffer), NULL);
 
-    // uint8_t report_id = event->dyndata.data[0];
-
-    // __ASSERT_NO_MSG(report_id < ARRAY_SIZE(report_index));
-    // __ASSERT_NO_MSG(report_sent_cb[report_id]);
-
-    // if (!subscribed[report_id])
-    // {
-    //     /* Notification disabled */
-    //     LOG_WRN("Notification disabled");
-    //     hid_report_sent(cur_conn, report_id, true);
-    //     return;
-    // }
-    
-    const uint8_t *buffer = &event->dyndata.data[sizeof(report_id)];
-    size_t size = event->dyndata.size - sizeof(report_id);
-    int err;
-
-    if (protocol_boot)
-    {
-        err = -EBADF;
-    }
-    else
-    {
-        err = bt_hids_inp_rep_send(&hids_obj, cur_conn,
-                                    report_index[report_id],
-                                    buffer, size,
-                                    report_sent_cb[report_id]);
-    }
-    }
-
-    if (err)
-    {
-        if (err == -ENOTCONN)
+        if (err)
         {
-            LOG_WRN("Cannot send report: device disconnected");
+            if (err == -ENOTCONN)
+            {
+                LOG_WRN("Cannot send report: device disconnected");
+            }
+            else if (err == -EBADF)
+            {
+                LOG_WRN("Cannot send report: incompatible mode");
+            }
+            else
+            {
+                LOG_ERR("Cannot send report (%d)", err);
+            }
+            return;
+            // hid_report_sent(cur_conn, report_id, true);
         }
-        else if (err == -EBADF)
-        {
-            LOG_WRN("Cannot send report: incompatible mode");
-        }
-        else
-        {
-            LOG_ERR("Cannot send report (%d)", err);
-        }
-        hid_report_sent(cur_conn, report_id, true);
+        LOG_DBG("HID report successfully sent. Val: %d", buffer[0]);
     }
 }
 
-static void notify_secured_fn(struct k_work *work)
-{
-    secured = true;
+// static void notify_secured_fn(struct k_work *work)
+// {
+//     secured = true;
 
-    for (size_t r_id = 0; r_id < REPORT_ID_COUNT; r_id++)
-    {
-        bool enabled = report_enabled[r_id];
-        broadcast_subscription_change(r_id, enabled);
-    }
-}
+//     for (size_t r_id = 0; r_id < REPORT_ID_COUNT; r_id++)
+//     {
+//         bool enabled = report_enabled[r_id];
+//         broadcast_subscription_change(r_id, enabled);
+//     }
+// }
 
 static void notify_hids(const struct ble_peer_event *event)
 {
@@ -144,10 +145,10 @@ static void notify_hids(const struct ble_peer_event *event)
     switch (event->state)
     {
     case PEER_STATE_CONNECTED:
-        __ASSERT_NO_MSG(cur_conn == NULL);
-        cur_conn = event->id;
+        // bt_conn* cur_conn = event->id;
+        // __ASSERT_NO_MSG(cur_conn == NULL);
         err = bt_hids_connected(&hids_obj, event->id);
-
+        insert_conn_object(event->id);
         if (err)
         {
             LOG_ERR("Failed to notify the HID Service about the"
@@ -156,42 +157,43 @@ static void notify_hids(const struct ble_peer_event *event)
         break;
 
     case PEER_STATE_DISCONNECTED:
-        __ASSERT_NO_MSG(cur_conn == event->id);
+        // __ASSERT_NO_MSG(cur_conn == event->id);
         err = bt_hids_disconnected(&hids_obj, event->id);
-
+        struct bt_conn* conn = event->id;
+    	for (size_t i = 0; i < CONFIG_BT_HIDS_MAX_CLIENT_COUNT; i++) {
+		if (conn_mode[i].conn == conn) {
+			conn_mode[i].conn = NULL;
+			break;
+		}
+	}
         if (err)
         {
             LOG_ERR("Connection context was not allocated");
         }
 
-        if (IS_ENABLED(CONFIG_DESKTOP_CONFIG_CHANNEL_ENABLE))
-        {
-            config_channel_transport_disconnect(
-                &cfg_chan_transport);
-        }
-
-        cur_conn = NULL;
-        secured = false;
-        protocol_boot = false;
-        if (CONFIG_DESKTOP_HIDS_FIRST_REPORT_DELAY > 0)
-        {
-            /* Cancel cannot fail if executed from another work's context. */
-            (void)k_work_cancel_delayable(&notify_secured);
-        }
+        // cur_conn = NULL;
+        // secured = false;
+        // protocol_boot = false;
+        // if (CONFIG_DESKTOP_HIDS_FIRST_REPORT_DELAY > 0)
+        // {
+        //     /* Cancel cannot fail if executed from another work's context. */
+        //     (void)k_work_cancel_delayable(&notify_secured);
+        // }
         break;
 
     case PEER_STATE_SECURED:
-        __ASSERT_NO_MSG(cur_conn == event->id);
+        // __ASSERT_NO_MSG(cur_conn == event->id);
 
-        if (CONFIG_DESKTOP_HIDS_FIRST_REPORT_DELAY > 0)
-        {
-            k_work_reschedule(&notify_secured,
-                              K_MSEC(CONFIG_DESKTOP_HIDS_FIRST_REPORT_DELAY));
-        }
-        else
-        {
-            notify_secured_fn(NULL);
-        }
+        // if (CONFIG_DESKTOP_HIDS_FIRST_REPORT_DELAY > 0)
+        // {
+        //     k_work_reschedule(&notify_secured,
+        //                       K_MSEC(CONFIG_DESKTOP_HIDS_FIRST_REPORT_DELAY));
+        // }
+        // else
+        // {
+        //     notify_secured_fn(NULL);
+            
+        // }
 
         break;
 
@@ -210,27 +212,13 @@ static bool app_event_handler(const struct app_event_header *aeh)
 {
     if (is_qdec_module_event(aeh))
     {
-        LOG_DBG("Got qdec event");
         send_hid_report(cast_qdec_module_event(aeh));
         return false;
     }
-    // if (is_hid_report_event(aeh))
-    // {
-    //     send_hid_report(cast_hid_report_event(aeh));
-
-    //     return false;
-    // }
 
     if (is_ble_peer_event(aeh))
     {
         notify_hids(cast_ble_peer_event(aeh));
-
-        return false;
-    }
-
-    if (is_hid_notification_event(aeh))
-    {
-        sync_notif_handler(cast_hid_notification_event(aeh));
 
         return false;
     }

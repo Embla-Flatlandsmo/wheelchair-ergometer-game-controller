@@ -15,9 +15,10 @@ const uint8_t hid_report_desc[] = {
 	0xA1, 0x01, /* Collection (Application) */
 	0xa1, 0x00, /* Collection (Physical) */
 	0x85, 0x01, /* Report Id 1 */
-	0x05, 0x01, /* Usage Page (Generic Desktop) */
-	0x15, 0x81, /* Logical Minimum (-127) */
-	0x25, 0x7F, /* Logical Maximum (127) */
+	0x09, 0x01, /* Usage (Pointer) */
+	// 0x05, 0x01, /* Usage Page (Generic Desktop) */
+	0x15, 0x00,        /* Logical Minimum (0) */
+	0x26, 0xFF, 0x00,  /* Logical Maximum (255) */
 	0x09, 0x30, /* Usage (X) */
 	0x09, 0x31, /* Usage (Y) */
 	0x75, 0x08, /* Report Size (8) */
