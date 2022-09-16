@@ -57,7 +57,7 @@ static void module_thread_fn(void)
 	}
     uint8_t simulated_val = 0;
 	while (true) {
-        simulated_val += 1;
+        simulated_val += 10;
 		struct qdec_module_event *qdec_module_event = new_qdec_module_event();
 		qdec_module_event->type = QDEC_EVT_DATA_SEND;
 		qdec_module_event->data.rot_speed_val = simulated_val;
