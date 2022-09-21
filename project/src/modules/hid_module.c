@@ -40,24 +40,28 @@ BT_HIDS_DEF(hids_obj,
             INPUT_REP_MOVEMENT_NUM_BYTES);
 
 
-static struct conn_mode {
-	struct bt_conn *conn;
-	bool in_boot_mode;
-} conn_mode[CONFIG_BT_HIDS_MAX_CLIENT_COUNT];
+// static struct conn_mode {
+// 	struct bt_conn *conn;
+// 	bool in_boot_mode;
+// } conn_mode[CONFIG_BT_HIDS_MAX_CLIENT_COUNT];
 
-static void insert_conn_object(struct bt_conn *conn)
-{
-	for (size_t i = 0; i < CONFIG_BT_HIDS_MAX_CLIENT_COUNT; i++) {
-		if (!conn_mode[i].conn) {
-			conn_mode[i].conn = conn;
-			conn_mode[i].in_boot_mode = false;
+static struct bt_conn *cur_conn;
+static bool secured;
+static bool protocol_boot;
 
-			return;
-		}
-	}
+// static void insert_conn_object(struct bt_conn *conn)
+// {
+// 	for (size_t i = 0; i < CONFIG_BT_HIDS_MAX_CLIENT_COUNT; i++) {
+// 		if (!conn_mode[i].conn) {
+// 			conn_mode[i].conn = conn;
+// 			conn_mode[i].in_boot_mode = false;
 
-	printk("Connection object could not be inserted %p\n", conn);
-}
+// 			return;
+// 		}
+// 	}
+
+// 	printk("Connection object could not be inserted %p\n", conn);
+// }
 
 
 
@@ -92,39 +96,38 @@ static void send_hid_report(const struct qdec_module_event *event)
     if (event->type != QDEC_EVT_DATA_SEND) {
         return;
     }
-    for (size_t i = 0; i < CONFIG_BT_HIDS_MAX_CLIENT_COUNT; i++) {
-
-		if (!conn_mode[i].conn) {
-			continue;
-		}
-        
-        uint8_t buffer[2];
-        buffer[0] = event->data.rot_speed_val;
-        buffer[1] = event->data.rot_speed_val;
-        int err;
-        err = bt_hids_inp_rep_send(&hids_obj, conn_mode[i].conn,
-                        INPUT_REP_MOVEMENT_INDEX,
-                        buffer, sizeof(buffer), NULL);
-
-        if (err)
-        {
-            if (err == -ENOTCONN)
-            {
-                LOG_WRN("Cannot send report: device disconnected");
-            }
-            else if (err == -EBADF)
-            {
-                LOG_WRN("Cannot send report: incompatible mode");
-            }
-            else
-            {
-                LOG_ERR("Cannot send report (%d)", err);
-            }
-            return;
-            // hid_report_sent(cur_conn, report_id, true);
-        }
-        LOG_DBG("HID report successfully sent. Val: %d", buffer[0]);
+    // for (size_t i = 0; i < CONFIG_BT_HIDS_MAX_CLIENT_COUNT; i++) {
+    if (!cur_conn)
+    {
+        return;
     }
+    uint8_t buffer[2];
+    buffer[0] = event->data.rot_speed_val;
+    buffer[1] = event->data.rot_speed_val;
+    int err;
+    err = bt_hids_inp_rep_send(&hids_obj, cur_conn,
+                    INPUT_REP_MOVEMENT_INDEX,
+                    buffer, sizeof(buffer), NULL);
+
+    if (err)
+    {
+        if (err == -ENOTCONN)
+        {
+            LOG_WRN("Cannot send report: device disconnected");
+        }
+        else if (err == -EBADF)
+        {
+            LOG_WRN("Cannot send report: incompatible mode");
+        }
+        else
+        {
+            LOG_ERR("Cannot send report (%d)", err);
+        }
+        return;
+        // hid_report_sent(cur_conn, report_id, true);
+    }
+    LOG_DBG("HID report successfully sent. Val: %d", buffer[0]);
+    // }
 }
 
 // static void notify_secured_fn(struct k_work *work)
@@ -145,10 +148,10 @@ static void notify_hids(const struct ble_peer_event *event)
     switch (event->state)
     {
     case PEER_STATE_CONNECTED:
-        // bt_conn* cur_conn = event->id;
-        // __ASSERT_NO_MSG(cur_conn == NULL);
+        __ASSERT_NO_MSG(cur_conn == NULL);
+        cur_conn = event->id;
         err = bt_hids_connected(&hids_obj, event->id);
-        insert_conn_object(event->id);
+        // insert_conn_object(event->id);
         if (err)
         {
             LOG_ERR("Failed to notify the HID Service about the"
@@ -157,15 +160,11 @@ static void notify_hids(const struct ble_peer_event *event)
         break;
 
     case PEER_STATE_DISCONNECTED:
-        // __ASSERT_NO_MSG(cur_conn == event->id);
+        __ASSERT_NO_MSG(cur_conn == event->id);
         err = bt_hids_disconnected(&hids_obj, event->id);
-        struct bt_conn* conn = event->id;
-    	for (size_t i = 0; i < CONFIG_BT_HIDS_MAX_CLIENT_COUNT; i++) {
-		if (conn_mode[i].conn == conn) {
-			conn_mode[i].conn = NULL;
-			break;
-		}
-	}
+		cur_conn = NULL;
+		secured = false;
+		protocol_boot = false;
         if (err)
         {
             LOG_ERR("Connection context was not allocated");
@@ -182,7 +181,8 @@ static void notify_hids(const struct ble_peer_event *event)
         break;
 
     case PEER_STATE_SECURED:
-        // __ASSERT_NO_MSG(cur_conn == event->id);
+        __ASSERT_NO_MSG(cur_conn == event->id);
+        secured = true;
 
         // if (CONFIG_DESKTOP_HIDS_FIRST_REPORT_DELAY > 0)
         // {
@@ -222,7 +222,7 @@ static bool app_event_handler(const struct app_event_header *aeh)
 
         return false;
     }
-
+    
     if (is_module_state_event(aeh))
     {
         struct module_state_event *event = cast_module_state_event(aeh);
