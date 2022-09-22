@@ -1,13 +1,13 @@
 /*
- * Copyright (c) 2020 Tobias Svehagen
+ * Copyright (c) 2022 Embla Flatlandsmo
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
 /dts-v1/;
+/dts-v1/;
 #include <nordic/nrf52840_qiaa.dtsi>
-#include "feather_connector.dtsi"
-#include "adafruit_feather_nrf52840-pinctrl.dtsi"
+#include "adafruit_itsybitsy_nrf52840-pinctrl.dtsi"
 
 / {
 	model = "Adafruit ItsyBitsy nRF52840 Express";
