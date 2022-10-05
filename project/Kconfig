@@ -27,6 +27,8 @@ rsource "src/modules/Kconfig.hid_module"
 
 rsource "src/events/Kconfig"
 
+rsource "drivers/Kconfig"
+
 endmenu
 
 menu "Zephyr Kernel"

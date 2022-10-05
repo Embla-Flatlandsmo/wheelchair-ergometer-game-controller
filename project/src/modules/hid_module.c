@@ -93,7 +93,8 @@ static int module_init(void)
 
 static void send_hid_report(const struct qdec_module_event *event)
 {
-    if (event->type != QDEC_EVT_DATA_SEND) {
+    if ((event->type != QDEC_A_EVT_DATA_SEND) ||
+        (event->type != QDEC_B_EVT_DATA_SEND)) {
         return;
     }
     // for (size_t i = 0; i < CONFIG_BT_HIDS_MAX_CLIENT_COUNT; i++) {
@@ -101,9 +102,10 @@ static void send_hid_report(const struct qdec_module_event *event)
     {
         return;
     }
-    uint8_t buffer[2];
-    buffer[0] = event->data.rot_speed_val;
-    buffer[1] = event->data.rot_speed_val;
+    float rot_val = event->data.rot_val;
+    uint8_t buffer[2] = {0, 0};
+    // buffer[0] = event->data.rot_val;
+    // buffer[1] = event->data.rot_val;
     int err;
     err = bt_hids_inp_rep_send(&hids_obj, cur_conn,
                     INPUT_REP_MOVEMENT_INDEX,

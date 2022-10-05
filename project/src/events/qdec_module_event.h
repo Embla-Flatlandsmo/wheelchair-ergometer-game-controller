@@ -32,7 +32,8 @@ enum qdec_module_event_type {
 	 *  If a non LwM2M build is used the data is heap allocated and must be freed after use by
 	 *  calling k_free() on `data.buffer.buf`.
 	 */
-	QDEC_EVT_DATA_SEND,
+	QDEC_A_EVT_DATA_SEND,
+	QDEC_B_EVT_DATA_SEND,
 
 	/** The data module has performed all procedures to prepare for
 	 *  a shutdown of the system. The event carries the ID (id) of the module.
@@ -53,7 +54,7 @@ struct qdec_module_event {
 	enum qdec_module_event_type type;
 
 	union {
-		uint8_t rot_speed_val;
+		float rot_val;
 		/** Module ID, used when acknowledging shutdown requests. */
 		uint32_t id;
 		/** Code signifying the cause of error. */

@@ -12,8 +12,10 @@
 static char *get_evt_type_str(enum qdec_module_event_type type)
 {
 	switch (type) {
-	case QDEC_EVT_DATA_SEND:
-		return "QDEC_EVT_DATA_SEND";
+	case QDEC_A_EVT_DATA_SEND:
+		return "QDEC_A_EVT_DATA_SEND";
+	case QDEC_B_EVT_DATA_SEND:
+		return "QDEC_B_EVT_DATA_SEND";
 	case QDEC_EVT_DATA_READY:
 		return "QDEC_EVT_DATA_READY";
 	case QDEC_EVT_SHUTDOWN_READY:
@@ -32,9 +34,10 @@ static void log_event(const struct app_event_header *aeh)
 	if (event->type == QDEC_EVT_ERROR) {
 		APP_EVENT_MANAGER_LOG(aeh, "%s - Error code %d",
 				get_evt_type_str(event->type), event->data.err);
-	} else if (event->type == QDEC_EVT_DATA_SEND) {
-		APP_EVENT_MANAGER_LOG(aeh, "%s: %d",
-				get_evt_type_str(event->type), event->data.rot_speed_val);
+	} else if ((event->type == QDEC_A_EVT_DATA_SEND)
+	|| (event->type == QDEC_B_EVT_DATA_SEND)) {
+		APP_EVENT_MANAGER_LOG(aeh, "%s: %f",
+				get_evt_type_str(event->type), event->data.rot_val);
 	} 
 	else {
 		APP_EVENT_MANAGER_LOG(aeh, "%s", get_evt_type_str(event->type));

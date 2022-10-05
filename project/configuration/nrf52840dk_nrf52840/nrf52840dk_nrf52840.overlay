@@ -1,0 +1,22 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+
+/ {
+	qdecA: qdecA {
+		compatible = "nordic,qdec-gpio";
+		status = "okay";
+		label = "quadrature encoder A";
+		line-a-gpios = <&gpio1 10 0>;
+		line-b-gpios = <&gpio1 11 0>;
+		ticks-per-rotation = <96>;
+	};
+
+	qdecB: qdecB {
+		compatible = "nordic,qdec-gpio";
+		status = "okay";
+		label = "quadrature encoder B";
+		line-a-gpios = <&gpio0 27 0>;
+		line-b-gpios = <&gpio0 26 0>;
+		ticks-per-rotation = <96>;
+	};
+
+};

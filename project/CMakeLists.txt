@@ -39,3 +39,4 @@ target_include_directories(app PRIVATE src)
 # Application directories
 add_subdirectory(src/modules)
 add_subdirectory(src/events)
+add_subdirectory(drivers)
