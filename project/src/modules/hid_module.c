@@ -28,6 +28,9 @@ LOG_MODULE_REGISTER(MODULE, CONFIG_HID_MODULE_LOG_LEVEL);
 
 const float max_speed_m_per_sec = ((float)CONFIG_APP_MAX_SPEED_CM_PER_SEC)/100.0;
 const float min_speed_m_per_sec = ((float)CONFIG_APP_MIN_SPEED_CM_PER_SEC)/100.0;
+const float cylinder_diameter_m = ((float)CONFIG_APP_CYLINDER_DIAMETER_CM)/100.0;
+const float max_speed_diff_m_per_sec = ((float)CONFIG_APP_MAX_SPEED_DIFF_CM_PER_SEC)/100.0;
+const float min_speed_diff_m_per_sec = ((float)CONFIG_APP_MIN_SPEED_DIFF_CM_PER_SEC)/100.0;
 
 
 #define BASE_USB_HID_SPEC_VERSION 0x0101
@@ -52,7 +55,7 @@ static bool protocol_boot;
 static float rot_speed_to_meters_per_second(float rot_speed_deg_per_second)
 {
     float rot_speed_rad_per_second = rot_speed_deg_per_second * M_PI / 180.0;
-    return (float)CONFIG_APP_CYLINDER_DIAMETER_CM/(2.0*100.0) * rot_speed_rad_per_second;
+    return cylinder_diameter_m/2.0 * rot_speed_rad_per_second;
 }
 
 static float wheel_speed_avg(float wheel_a_speed, float wheel_b_speed)
@@ -77,7 +80,7 @@ static uint8_t map_range(float value, float input_start, float input_end, uint8_
 {
     float input_decimal = (value-input_start)/(input_end-input_start);
     uint8_t output_without_start_offset = (uint8_t)(input_decimal*(float)(output_end-output_start)+0.5);
-    return output_start + output_without_start_offset;
+    return CLAMP(output_start + output_without_start_offset, output_start, output_end);
 }
 
 static int module_init(void)
@@ -122,7 +125,7 @@ static void qdec_event_to_speed(const struct qdec_module_event *event, uint8_t* 
     float speed_diff = wheel_speed_difference(wheel_a_speed, wheel_b_speed);
     float speed_avg = wheel_speed_avg(wheel_a_speed, wheel_b_speed);
 
-    (*wheel_difference) = map_range(speed_diff, -max_speed_m_per_sec, max_speed_m_per_sec, 0, 255);
+    (*wheel_difference) = map_range(speed_diff, -max_speed_diff_m_per_sec, max_speed_diff_m_per_sec, 0, 255);
     (*wheel_avg) = map_range(speed_avg, -max_speed_m_per_sec, max_speed_m_per_sec, 0, 255);
     LOG_DBG("Wheel_avg: %d, wheel_diff: %d", *wheel_avg, *wheel_difference);
 }

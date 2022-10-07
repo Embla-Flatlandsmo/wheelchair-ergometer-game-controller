@@ -6,7 +6,7 @@ if QDEC_MODULE
 
 config QDEC_TIMEOUT_DURATION_MSEC
 	int "Milliseconds elapsed before 0 is output in HID report"
-	default 3000
+	default 500
 
 config QDEC_MINIMUM_DELTA_TIME_MSEC
 	int "Minimum milliseconds required for a encoder update to be valid"
@@ -14,6 +14,10 @@ config QDEC_MINIMUM_DELTA_TIME_MSEC
 	help
 		"Larger values means there is less susceptibility 
 		to noise but the system might not pick up actual readings"
+
+config QDEC_VELOCITY_LOW_PASS_FILTER_COEFFICIENT
+	int "Alpha for moving average filter. Min 0, max 1000"
+	default 800
 
 endif # QDEC_MODULE
 

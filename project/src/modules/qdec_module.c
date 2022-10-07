@@ -27,7 +27,7 @@ static double rot_a;
 static double rot_b;
 static int64_t qdec_a_delta_time;
 static int64_t qdec_b_delta_time;
-
+static const float alpha = ((float)CONFIG_QDEC_VELOCITY_LOW_PASS_FILTER_COEFFICIENT)/1000.0;
 
 static void send_data_evt(void)
 {
@@ -71,6 +71,11 @@ void qdec_b_timeout_handler(struct k_timer *dummy)
 
 K_TIMER_DEFINE(qdec_b_timeout, qdec_b_timeout_handler, NULL);
 
+static float moving_avg_filter(float y_prev, float y)
+{
+	return alpha*y_prev + (1-alpha)*y;
+}
+
 static void trigger_a_handler(const struct device *dev, const struct sensor_trigger* trig)
 {
 	struct sensor_value rot;
@@ -94,7 +99,9 @@ static void trigger_a_handler(const struct device *dev, const struct sensor_trig
 		return;
 	}
 	long double delta_time = dt;
-	qdec_a_rot_speed = ((new_rot_a-rot_a)*1000.0/delta_time);
+	double rot_speed = (new_rot_a-rot_a)*1000.0/delta_time;
+	
+	qdec_a_rot_speed = moving_avg_filter(qdec_a_rot_speed, rot_speed);
 	rot_a = new_rot_a;
 	send_data_evt();
 	k_timer_start(&qdec_a_timeout, K_MSEC(CONFIG_QDEC_TIMEOUT_DURATION_MSEC), K_NO_WAIT);
@@ -123,7 +130,9 @@ static void trigger_b_handler(const struct device *dev, const struct sensor_trig
 		return;
 	}
 	long double delta_time = dt;
-	qdec_b_rot_speed = (1000.0*(new_rot_b-rot_b)/delta_time);
+	double rot_speed = (new_rot_b-rot_b)*1000.0/delta_time;
+	
+	qdec_b_rot_speed = moving_avg_filter(qdec_b_rot_speed, rot_speed);
 	rot_b = new_rot_b;
 	send_data_evt();
 	

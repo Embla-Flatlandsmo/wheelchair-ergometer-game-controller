@@ -16,20 +16,23 @@ config APP_CYLINDER_DIAMETER_CM
 
 
 config APP_MIN_SPEED_CM_PER_SEC
-	int "Translational speed that maps to 0 output in HID report"
+	int "Translational speed that maps to no output in HID report"
 	default 2
     help 
         "Uses centimeter per second to get a finer resolution"
 
 config APP_MAX_SPEED_CM_PER_SEC
-	int "Translational speed that maps to 255 output in HID report"
-	default 160
+	int "Translational speed that maps to max output in HID report"
+	default 50
     help
         "Uses centimeter per second to get a finer resolution"
 
-config APP_WHEEL_SPEED_DIFFERENCE_PERCENTAGE
-    int "Adjust turning sensitivity for wheels"
-    default 100
+config APP_MIN_SPEED_DIFF_CM_PER_SEC
+    int "Minimum speed difference between wheels which maps to no output in HID report"
+    default 2
 
+config APP_MAX_SPEED_DIFF_CM_PER_SEC
+    int "Maximum speed difference between wheels which maps to max output in HID report"
+    default 50
 
 endmenu
