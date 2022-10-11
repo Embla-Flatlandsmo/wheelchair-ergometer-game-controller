@@ -99,7 +99,28 @@ static int qdec_gpio_trigger_set(const struct device *dev, const struct sensor_t
 
 static void qdec_line_callback(const struct device *port, struct gpio_callback *cb, uint32_t pins)
 {
-    static int8_t lookup_table[] = {0, -1, 1, 2, 1, 0, 2, -1, -1, 2, 0, 1, 2, 1, -1, 0};
+    // Decoding partially taken from https://electronics.stackexchange.com/a/360638
+    static int8_t lookup_table[16] = {
+        0, // 00 to 00
+       -1, // 00 to 01
+        1, // 00 to 10
+        2, // 00 to 11
+
+        1, // 01 to 00 
+        0, // 01 to 01
+        2, // 01 to 10
+       -1, // 01 to 11
+
+       -1, // 10 to 00 
+        2, // 10 to 01
+        0, // 10 to 10
+        1, // 10 to 11
+
+        2, // 11 to 00
+        1, // 11 to 01
+       -1, // 11 to 10
+        0  // 11 to 11
+    };
 
     struct device *dev = CONTAINER_OF(cb, struct qdec_gpio_cb_container, cb)->dev;
     struct qdec_gpio_data *data = dev->data;

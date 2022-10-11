@@ -24,6 +24,15 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(MODULE, CONFIG_HID_MODULE_LOG_LEVEL);
 
+#define M_PI   3.14159265358979323846264338327950288
+
+const float max_speed_m_per_sec = ((float)CONFIG_APP_MAX_SPEED_CM_PER_SEC)/100.0;
+const float min_speed_m_per_sec = ((float)CONFIG_APP_MIN_SPEED_CM_PER_SEC)/100.0;
+const float cylinder_diameter_m = ((float)CONFIG_APP_CYLINDER_DIAMETER_CM)/100.0;
+const float max_speed_diff_m_per_sec = ((float)CONFIG_APP_MAX_SPEED_DIFF_CM_PER_SEC)/100.0;
+const float min_speed_diff_m_per_sec = ((float)CONFIG_APP_MIN_SPEED_DIFF_CM_PER_SEC)/100.0;
+
+
 #define BASE_USB_HID_SPEC_VERSION 0x0101
 
 /* Number of input reports in this application. */
@@ -39,31 +48,40 @@ LOG_MODULE_REGISTER(MODULE, CONFIG_HID_MODULE_LOG_LEVEL);
 BT_HIDS_DEF(hids_obj,
             INPUT_REP_MOVEMENT_NUM_BYTES);
 
-
-// static struct conn_mode {
-// 	struct bt_conn *conn;
-// 	bool in_boot_mode;
-// } conn_mode[CONFIG_BT_HIDS_MAX_CLIENT_COUNT];
-
 static struct bt_conn *cur_conn;
 static bool secured;
 static bool protocol_boot;
 
-// static void insert_conn_object(struct bt_conn *conn)
-// {
-// 	for (size_t i = 0; i < CONFIG_BT_HIDS_MAX_CLIENT_COUNT; i++) {
-// 		if (!conn_mode[i].conn) {
-// 			conn_mode[i].conn = conn;
-// 			conn_mode[i].in_boot_mode = false;
+static float rot_speed_to_meters_per_second(float rot_speed_deg_per_second)
+{
+    float rot_speed_rad_per_second = rot_speed_deg_per_second * M_PI / 180.0;
+    return cylinder_diameter_m/2.0 * rot_speed_rad_per_second;
+}
 
-// 			return;
-// 		}
-// 	}
+static float wheel_speed_avg(float wheel_a_speed, float wheel_b_speed)
+{
+    return (wheel_a_speed + wheel_b_speed) / 2.0;
+}
 
-// 	printk("Connection object could not be inserted %p\n", conn);
-// }
+static float wheel_speed_difference(float wheel_a_speed, float wheel_b_speed)
+{
+    return wheel_a_speed - wheel_b_speed;
+}
 
+static float speed_limits(float speed_m_per_sec)
+{
+    if (IN_RANGE(speed_m_per_sec, -min_speed_m_per_sec, min_speed_m_per_sec)) {
+        return 0.0;
+    }
+    return CLAMP(speed_m_per_sec, -max_speed_m_per_sec, max_speed_m_per_sec);
+}
 
+static uint8_t map_range(float value, float input_start, float input_end, uint8_t output_start, uint8_t output_end)
+{
+    float input_decimal = (value-input_start)/(input_end-input_start);
+    uint8_t output_without_start_offset = (uint8_t)(input_decimal*(float)(output_end-output_start)+0.5);
+    return CLAMP(output_start + output_without_start_offset, output_start, output_end);
+}
 
 static int module_init(void)
 {
@@ -91,21 +109,36 @@ static int module_init(void)
     return bt_hids_init(&hids_obj, &hids_init_param);
 }
 
-static void send_hid_report(const struct qdec_module_event *event)
+static void qdec_event_to_speed(const struct qdec_module_event *event, uint8_t* wheel_difference, uint8_t* wheel_avg)
 {
-    if ((event->type != QDEC_A_EVT_DATA_SEND) ||
-        (event->type != QDEC_B_EVT_DATA_SEND)) {
+    if (event->type != QDEC_EVT_DATA_READY)
+    {
         return;
     }
+    
+    float wheel_a_speed = rot_speed_to_meters_per_second(event->rot_speed_a);
+    float wheel_b_speed = rot_speed_to_meters_per_second(event->rot_speed_b);
+
+    wheel_a_speed = speed_limits(wheel_a_speed);
+    wheel_b_speed = speed_limits(wheel_b_speed);
+
+    float speed_diff = wheel_speed_difference(wheel_a_speed, wheel_b_speed);
+    float speed_avg = wheel_speed_avg(wheel_a_speed, wheel_b_speed);
+
+    (*wheel_difference) = map_range(speed_diff, -max_speed_diff_m_per_sec, max_speed_diff_m_per_sec, 0, 255);
+    (*wheel_avg) = map_range(speed_avg, -max_speed_m_per_sec, max_speed_m_per_sec, 0, 255);
+    LOG_DBG("Wheel_avg: %d, wheel_diff: %d", *wheel_avg, *wheel_difference);
+}
+
+static void send_hid_report(uint8_t x_axis, uint8_t y_axis)
+{
     // for (size_t i = 0; i < CONFIG_BT_HIDS_MAX_CLIENT_COUNT; i++) {
     if (!cur_conn)
     {
         return;
     }
-    float rot_val = event->data.rot_val;
-    uint8_t buffer[2] = {0, 0};
-    // buffer[0] = event->data.rot_val;
-    // buffer[1] = event->data.rot_val;
+    uint8_t buffer[2] = {x_axis, y_axis};
+
     int err;
     err = bt_hids_inp_rep_send(&hids_obj, cur_conn,
                     INPUT_REP_MOVEMENT_INDEX,
@@ -128,7 +161,7 @@ static void send_hid_report(const struct qdec_module_event *event)
         return;
         // hid_report_sent(cur_conn, report_id, true);
     }
-    LOG_DBG("HID report successfully sent. Val: %d", buffer[0]);
+    LOG_DBG("HID report successfully sent. x-axis val: %d, y-axis val: %d", buffer[0], buffer[1]);
     // }
 }
 
@@ -214,7 +247,11 @@ static bool app_event_handler(const struct app_event_header *aeh)
 {
     if (is_qdec_module_event(aeh))
     {
-        send_hid_report(cast_qdec_module_event(aeh));
+        // k_timer_start(&qdec_timeout, K_MSEC(CONFIG_HID_TIMEOUT_DURATION_MSEC), K_NO_WAIT);
+        uint8_t speed_diff = 0;
+        uint8_t speed_avg = 0;
+        qdec_event_to_speed(cast_qdec_module_event(aeh), &speed_diff, &speed_avg);
+        send_hid_report(speed_diff, speed_avg);
         return false;
     }
 
@@ -250,8 +287,6 @@ static bool app_event_handler(const struct app_event_header *aeh)
                 return false;
             }
             LOG_INF("Service initialized");
-
-            module_set_state(MODULE_STATE_READY);
         }
         return false;
     }
