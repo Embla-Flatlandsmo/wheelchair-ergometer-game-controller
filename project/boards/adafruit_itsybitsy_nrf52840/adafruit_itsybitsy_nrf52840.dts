@@ -21,14 +21,14 @@
 		zephyr,bt-c2h-uart = &uart0;
 		zephyr,sram = &sram0;
 		zephyr,flash = &flash0;
-		zephyr,code-partition = &slot0_partition;
+		zephyr,code-partition = &code_partition;
 	};
 
 	leds {
 		compatible = "gpio-leds";
 		led0: led_0 {
 			gpios = <&gpio0 6 0>;
-			label = "Blue LED";
+			label = "Red LED";
 		};
 	};
 
@@ -79,6 +79,19 @@
 	pinctrl-1 = <&i2c0_sleep>;
 	pinctrl-names = "default", "sleep";
 };
+&spi0 {
+	compatible = "nordic,nrf-spi";
+	status = "okay";
+	pinctrl-0 = <&spi0_default>;
+	pinctrl-1 = <&spi0_sleep>;
+	pinctrl-names = "default", "sleep";
+	apa102: apa102@0 {
+		label = "APA102 DotStar LED";
+		compatible = "apa,apa102";
+		reg=<0>;
+		spi-max-frequency = < 5250000 >;
+	};
+};
 
 &spi1 {
 	compatible = "nordic,nrf-spi";
@@ -110,38 +123,35 @@
 };
 
 &flash0 {
-
 	partitions {
 		compatible = "fixed-partitions";
 		#address-cells = <1>;
 		#size-cells = <1>;
 
-		boot_partition: partition@0 {
-			label = "mcuboot";
-			reg = <0x000000000 0x0000C000>;
+		/* To enable flashing with UF2 bootloader, we
+		must reserve a partition for SoftDevice.
+		See https://learn.adafruit.com/introducing-the-adafruit-nrf52840-feather?view=all#hathach-memory-map */
+		reserved_partition_0: partition@0 {
+			label = "SoftDevice";
+			reg = <0x000000000 DT_SIZE_K(152)>;
 		};
-		slot0_partition: partition@c000 {
-			label = "image-0";
-			reg = <0x0000C000 0x00067000>;
-		};
-		slot1_partition: partition@73000 {
-			label = "image-1";
-			reg = <0x00073000 0x00067000>;
-		};
-		scratch_partition: partition@da000 {
-			label = "image-scratch";
-			reg = <0x000da000 0x0001e000>;
+		code_partition: partition@26000 {
+			label = "Application";
+			reg = <0x00026000 DT_SIZE_K(796)>;
 		};
 
 		/*
-		 * The flash starting at 0x000f8000 and ending at
-		 * 0x000fffff is reserved for use by the application.
+		 * The flash starting at 0x000ed000 and ending at
+		 * 0x000f4000 is reserved for use by the application.
 		 */
-
-		/* Storage partition will be used by FCB/NFFS/NVS if enabled. */
-		storage_partition: partition@f8000 {
+		storage_partition: partition@ed000 {
 			label = "storage";
-			reg = <0x000f8000 0x00008000>;
+			reg = <0x0000ed000 DT_SIZE_K(28)>;
+		};
+
+		boot_partition: partition@f4000 {
+			label = "UF2";
+			reg = <0x000f4000 DT_SIZE_K(48)>;
 		};
 	};
 };
