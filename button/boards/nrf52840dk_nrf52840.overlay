@@ -1,0 +1,9 @@
+/ {
+    buttons {
+        button0: button_0 {
+            gpios = <&gpio0 26 (GPIO_ACTIVE_LOW)>;
+            label = "Push button switch 0";
+        };
+    };
+
+};
