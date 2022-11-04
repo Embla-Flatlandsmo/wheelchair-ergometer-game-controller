@@ -111,6 +111,18 @@ int module_get_next_msg(struct module_data *module, void *msg);
  */
 int module_enqueue_msg(struct module_data *module, void *msg);
 
+/** @brief Enqueue message to a module's queue.
+ *
+ *  @param[in] module Pointer to a structure containing module metadata.
+ *  @param[in] msg Pointer to a message that will be enqueued.
+ *  @param[in] delay_msec Number of milliseconds to wait before submitting message 
+ *
+ *  @return 0 if successful, otherwise a negative error code.
+ */
+int module_enqueue_msg_with_delay(struct module_data *module, void *msg, k_timeout_t delay_msec);
+
+
+
 /** @brief Register that a module has performed a graceful shutdown.
  *
  *  @param[in] id_reg Identifier of module.

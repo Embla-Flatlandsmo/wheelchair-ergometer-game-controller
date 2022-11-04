@@ -1,0 +1,31 @@
+menuconfig LED_MODULE
+	bool "LED module"
+	default n
+    depends on APA102_STRIP && LED_STRIP && SPI
+
+if LED_MODULE
+
+config LED_MODULE_THREAD_STACK_SIZE
+	int "LED module thread stack size"
+	default 1280
+
+config LED_MODULE_BLINK_THREAD_STACK_SIZE
+    int "LED blink thread stack size"
+    default 512
+
+config LED_MODULE_BLINK_DURATION_SHORT_MSEC
+	int "Led blinking duraction short"
+	default 200
+
+config LED_MODULE_BLINK_DURATION_MEDIUM_MSEC
+	int "Led blinking duraction medium"
+	default 500
+
+config LED_MODULE_BLINK_DURATION_LONG_MSEC
+	int "Led blinking duraction short"
+	default 1000
+endif # LED_MODULE
+
+module = LED_MODULE
+module-str = LED module
+source "subsys/logging/Kconfig.template.log_config"

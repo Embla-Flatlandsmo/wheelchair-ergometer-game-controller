@@ -63,11 +63,12 @@ int module_get_next_msg(struct module_data *module, void *msg)
 	return err;
 }
 
-int module_enqueue_msg(struct module_data *module, void *msg)
+
+int module_enqueue_msg_with_delay(struct module_data *module, void *msg, k_timeout_t delay_msec)
 {
 	int err;
 
-	err = k_msgq_put(module->msg_q, msg, K_NO_WAIT);
+	err = k_msgq_put(module->msg_q, msg, delay_msec);
 	if (err) {
 		LOG_WRN("%s: Message could not be enqueued, error code: %d",
 			module->name, err);
@@ -103,6 +104,11 @@ int module_enqueue_msg(struct module_data *module, void *msg)
 	}
 
 	return 0;
+}
+
+int module_enqueue_msg(struct module_data *module, void *msg)
+{
+	return module_enqueue_msg_with_delay(module, msg, K_NO_WAIT);
 }
 
 bool modules_shutdown_register(uint32_t id_reg)

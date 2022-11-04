@@ -59,3 +59,25 @@ adafruit-nrfutil dfu serial --package dfu-package.zip --port COMxx -b 115200
 
 - Navigate to folder containing firmware for the microcontroller you want to work with (```./balancing_robot_firmware/<MCU NAME>```) and use west commands for building and flashing the firmware as described in the [developer guide](https://developer.nordicsemi.com/nRF_Connect_SDK/doc/1.9.0/zephyr/guides/west/build-flash-debug.html#west-build-flash-debug). 
 -->
+
+## Connecting to the device
+On startup, the device will perform Bluetooth advertisement.
+
+### Adafruit ItsyBitsy nRF52840 light explanation
+| Color | Number of times | Duration | Meaning |
+| ----- | --------------- | -------- | ------- |
+| Green | 3 | Short | The device successfully booted |
+| Blue | 2 | Long | The device is advertising itself as "Wheelchair Ergometer". It should be found when you scan for it.
+| Orange | 2 |  Medium | The device is connected but the connection is not secure. | 
+| Green |  2 | Medium | The device is connected and the connection is secure | 
+| Red | 5 | Short | The device failed to connect to its peer |
+| Red | 2 | Short | The device was disconnected from its peer |
+
+### If the connection somehow fails
+The device stores which peers it has been paired to. Currently, it can paired to 2 different phones/PCs. This means that the device might not advertise itself (it only does if it has a free slot to store the pairing), or that the device might fail to connect to a paired device in some other way.
+
+To clear these pairing slots, do the following:
+- Reset the device by pressing the "RST" button
+- Before 5 seconds have passed, press the "SW" button
+
+The device should then clear all the pairing slots which frees it up to try pairing again.
