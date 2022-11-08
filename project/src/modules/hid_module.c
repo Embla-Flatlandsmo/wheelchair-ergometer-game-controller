@@ -16,7 +16,7 @@
 
 #include <caf/events/ble_common_event.h>
 #include "hid_report_desc.h"
-#include "events/qdec_module_event.h"
+#include "events/encoder_module_event.h"
 
 #define MODULE hid_module
 #include <caf/events/module_state_event.h>
@@ -109,9 +109,9 @@ static int module_init(void)
     return bt_hids_init(&hids_obj, &hids_init_param);
 }
 
-static void qdec_event_to_speed(const struct qdec_module_event *event, uint8_t* wheel_difference, uint8_t* wheel_avg)
+static void encoder_event_to_speed(const struct encoder_module_event *event, uint8_t* wheel_difference, uint8_t* wheel_avg)
 {
-    if (event->type != QDEC_EVT_DATA_READY)
+    if (event->type != ENCODER_EVT_DATA_READY)
     {
         return;
     }
@@ -245,12 +245,12 @@ static void notify_hids(const struct ble_peer_event *event)
 
 static bool app_event_handler(const struct app_event_header *aeh)
 {
-    if (is_qdec_module_event(aeh))
+    if (is_encoder_module_event(aeh))
     {
-        // k_timer_start(&qdec_timeout, K_MSEC(CONFIG_HID_TIMEOUT_DURATION_MSEC), K_NO_WAIT);
+        // k_timer_start(&encoder_timeout, K_MSEC(CONFIG_HID_TIMEOUT_DURATION_MSEC), K_NO_WAIT);
         uint8_t speed_diff = 0;
         uint8_t speed_avg = 0;
-        qdec_event_to_speed(cast_qdec_module_event(aeh), &speed_diff, &speed_avg);
+        encoder_event_to_speed(cast_encoder_module_event(aeh), &speed_diff, &speed_avg);
         send_hid_report(speed_diff, speed_avg);
         return false;
     }
@@ -297,7 +297,7 @@ static bool app_event_handler(const struct app_event_header *aeh)
     return false;
 }
 APP_EVENT_LISTENER(MODULE, app_event_handler);
-APP_EVENT_SUBSCRIBE(MODULE, qdec_module_event);
+APP_EVENT_SUBSCRIBE(MODULE, encoder_module_event);
 APP_EVENT_SUBSCRIBE(MODULE, hid_notification_event);
 APP_EVENT_SUBSCRIBE(MODULE, module_state_event);
 APP_EVENT_SUBSCRIBE_EARLY(MODULE, ble_peer_event);

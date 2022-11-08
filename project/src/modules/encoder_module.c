@@ -7,69 +7,69 @@
 
 #include <zephyr/kernel.h>
 
-#define MODULE qdec_module
+#define MODULE encoder_module
 #include <caf/events/module_state_event.h>
 #include <app_event_manager.h>
 #include <zephyr/settings/settings.h>
 #include <drivers/sensor.h>
 #include "modules_common.h"
-#include "events/qdec_module_event.h"
+#include "events/encoder_module_event.h"
 
 #include <zephyr/logging/log.h>
-LOG_MODULE_REGISTER(MODULE, CONFIG_QDEC_MODULE_LOG_LEVEL);
+LOG_MODULE_REGISTER(MODULE, CONFIG_ENCODER_MODULE_LOG_LEVEL);
 
 static struct sensor_trigger trig_a;
 static struct sensor_trigger trig_b;
 
-static float qdec_a_rot_speed;
-static float qdec_b_rot_speed;
+static float encoder_a_rot_speed;
+static float encoder_b_rot_speed;
 static double rot_a;
 static double rot_b;
-static int64_t qdec_a_delta_time;
-static int64_t qdec_b_delta_time;
-static const float alpha = ((float)CONFIG_QDEC_VELOCITY_LOW_PASS_FILTER_COEFFICIENT)/1000.0;
+static int64_t encoder_a_delta_time;
+static int64_t encoder_b_delta_time;
+static const float alpha = ((float)CONFIG_ENCODER_VELOCITY_LOW_PASS_FILTER_COEFFICIENT)/1000.0;
 
 static void send_data_evt(void)
 {
-	struct qdec_module_event *qdec_module_event = new_qdec_module_event();
-	qdec_module_event->type = QDEC_EVT_DATA_READY;
-	qdec_module_event->rot_speed_a = qdec_a_rot_speed;
-	qdec_module_event->rot_speed_b = qdec_b_rot_speed;
-	APP_EVENT_SUBMIT(qdec_module_event);
+	struct encoder_module_event *encoder_module_event = new_encoder_module_event();
+	encoder_module_event->type = ENCODER_EVT_DATA_READY;
+	encoder_module_event->rot_speed_a = encoder_a_rot_speed;
+	encoder_module_event->rot_speed_b = encoder_b_rot_speed;
+	APP_EVENT_SUBMIT(encoder_module_event);
 }
 
 
-void qdec_a_timeout_work_handler(struct k_work *work)
+void encoder_a_timeout_work_handler(struct k_work *work)
 {
-    k_uptime_delta(&qdec_a_delta_time);
-	qdec_a_rot_speed = 0.0;
+    k_uptime_delta(&encoder_a_delta_time);
+	encoder_a_rot_speed = 0.0;
 	send_data_evt();
 }
 
-K_WORK_DEFINE(qdec_a_timeout_work, qdec_a_timeout_work_handler);
+K_WORK_DEFINE(encoder_a_timeout_work, encoder_a_timeout_work_handler);
 
-void qdec_a_timeout_handler(struct k_timer *dummy)
+void encoder_a_timeout_handler(struct k_timer *dummy)
 {
-    k_work_submit(&qdec_a_timeout_work);
+    k_work_submit(&encoder_a_timeout_work);
 }
 
-K_TIMER_DEFINE(qdec_a_timeout, qdec_a_timeout_handler, NULL);
+K_TIMER_DEFINE(encoder_a_timeout, encoder_a_timeout_handler, NULL);
 
-void qdec_b_timeout_work_handler(struct k_work *work)
+void encoder_b_timeout_work_handler(struct k_work *work)
 {
-    k_uptime_delta(&qdec_b_delta_time);
-	qdec_b_rot_speed = 0.0;
+    k_uptime_delta(&encoder_b_delta_time);
+	encoder_b_rot_speed = 0.0;
 	send_data_evt();
 }
 
-K_WORK_DEFINE(qdec_b_timeout_work, qdec_b_timeout_work_handler);
+K_WORK_DEFINE(encoder_b_timeout_work, encoder_b_timeout_work_handler);
 
-void qdec_b_timeout_handler(struct k_timer *dummy)
+void encoder_b_timeout_handler(struct k_timer *dummy)
 {
-    k_work_submit(&qdec_b_timeout_work);
+    k_work_submit(&encoder_b_timeout_work);
 }
 
-K_TIMER_DEFINE(qdec_b_timeout, qdec_b_timeout_handler, NULL);
+K_TIMER_DEFINE(encoder_b_timeout, encoder_b_timeout_handler, NULL);
 
 static float moving_avg_filter(float y_prev, float y)
 {
@@ -94,17 +94,17 @@ static void trigger_a_handler(const struct device *dev, const struct sensor_trig
 	}
 
 	double new_rot_a = sensor_value_to_double(&rot);
-	int64_t dt = k_uptime_delta(&qdec_a_delta_time);
-	if (dt < CONFIG_QDEC_MINIMUM_DELTA_TIME_MSEC) {
+	int64_t dt = k_uptime_delta(&encoder_a_delta_time);
+	if (dt < CONFIG_ENCODER_MINIMUM_DELTA_TIME_MSEC) {
 		return;
 	}
 	long double delta_time = dt;
 	double rot_speed = (new_rot_a-rot_a)*1000.0/delta_time;
 	
-	qdec_a_rot_speed = moving_avg_filter(qdec_a_rot_speed, rot_speed);
+	encoder_a_rot_speed = moving_avg_filter(encoder_a_rot_speed, rot_speed);
 	rot_a = new_rot_a;
 	send_data_evt();
-	k_timer_start(&qdec_a_timeout, K_MSEC(CONFIG_QDEC_TIMEOUT_DURATION_MSEC), K_NO_WAIT);
+	k_timer_start(&encoder_a_timeout, K_MSEC(CONFIG_ENCODER_TIMEOUT_DURATION_MSEC), K_NO_WAIT);
 }
 
 static void trigger_b_handler(const struct device *dev, const struct sensor_trigger* trig)
@@ -125,27 +125,27 @@ static void trigger_b_handler(const struct device *dev, const struct sensor_trig
 	}
 	
 	double new_rot_b = sensor_value_to_double(&rot);
-	int64_t dt = k_uptime_delta(&qdec_b_delta_time);
-	if (dt < CONFIG_QDEC_MINIMUM_DELTA_TIME_MSEC) {
+	int64_t dt = k_uptime_delta(&encoder_b_delta_time);
+	if (dt < CONFIG_ENCODER_MINIMUM_DELTA_TIME_MSEC) {
 		return;
 	}
 	long double delta_time = dt;
 	double rot_speed = (new_rot_b-rot_b)*1000.0/delta_time;
 	
-	qdec_b_rot_speed = moving_avg_filter(qdec_b_rot_speed, rot_speed);
+	encoder_b_rot_speed = moving_avg_filter(encoder_b_rot_speed, rot_speed);
 	rot_b = new_rot_b;
 	send_data_evt();
 	
-	k_timer_start(&qdec_b_timeout, K_MSEC(CONFIG_QDEC_TIMEOUT_DURATION_MSEC), K_NO_WAIT);
+	k_timer_start(&encoder_b_timeout, K_MSEC(CONFIG_ENCODER_TIMEOUT_DURATION_MSEC), K_NO_WAIT);
 }
 
 static int module_init(void)
 {
-	const struct device* qdeca_dev = device_get_binding(DT_LABEL(DT_NODELABEL(qdeca)));
-	const struct device* qdecb_dev = device_get_binding(DT_LABEL(DT_NODELABEL(qdecb)));
-	if (qdeca_dev == NULL || qdecb_dev == NULL)
+	const struct device* encoder_a_dev = device_get_binding(DT_LABEL(DT_NODELABEL(qdeca)));
+	const struct device* encoder_b_dev = device_get_binding(DT_LABEL(DT_NODELABEL(qdecb)));
+	if (encoder_a_dev == NULL || encoder_b_dev == NULL)
 	{
-		LOG_ERR("Failed to get bindings for qdec devices");
+		LOG_ERR("Failed to get bindings for encoder devices");
 		return -ENODEV;
 	}
 
@@ -155,17 +155,17 @@ static int module_init(void)
 	trig_b.type = SENSOR_TRIG_DATA_READY;
 	trig_b.chan = SENSOR_CHAN_ROTATION;
 	int err;
-	err = sensor_trigger_set(qdeca_dev, &trig_a, trigger_a_handler);
+	err = sensor_trigger_set(encoder_a_dev, &trig_a, trigger_a_handler);
 	if (err)
 	{
-		LOG_ERR("sensor_trigger_set for qdecb error: %d", err);
+		LOG_ERR("sensor_trigger_set for encoder_b error: %d", err);
 		return err;
 	}
 
-	err = sensor_trigger_set(qdecb_dev, &trig_b, trigger_b_handler);
+	err = sensor_trigger_set(encoder_b_dev, &trig_b, trigger_b_handler);
 	if (err)
 	{
-		LOG_ERR("sensor_trigger_set for qdecb error: %d", err);
+		LOG_ERR("sensor_trigger_set for encoder_b error: %d", err);
 		return err;
 	}
 
@@ -181,14 +181,14 @@ static bool app_event_handler(const struct app_event_header *aeh)
 			
             if (module_init())
             {
-                LOG_ERR("QDEC module init failed");
+                LOG_ERR("ENCODER module init failed");
 
                 return false;
             }
-            LOG_INF("QDEC module initialized");
+            LOG_INF("ENCODER module initialized");
             int64_t current_time = k_uptime_get();
-            qdec_a_delta_time = current_time;
-            qdec_b_delta_time = current_time;
+            encoder_a_delta_time = current_time;
+            encoder_b_delta_time = current_time;
             module_set_state(MODULE_STATE_READY);
 		}
 

@@ -6,6 +6,6 @@
 
 target_include_directories(app PRIVATE .)
 target_sources(app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/modules_common.c)
-target_sources_ifdef(CONFIG_QDEC_MODULE app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/qdec_module.c)
+target_sources_ifdef(CONFIG_ENCODER_MODULE app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/encoder_module.c)
 target_sources_ifdef(CONFIG_HID_MODULE app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/hid_module.c)
 target_sources_ifdef(CONFIG_LED_MODULE app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/led_module.c)
