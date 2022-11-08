@@ -1,5 +1,8 @@
-menu "Balancing robot shield"
+menu "qdec_sample"
 rsource "drivers/Kconfig"
+rsource "src/modules/Kconfig.modules_common"
+rsource "src/modules/Kconfig.qdec_module"
+rsource "src/events/Kconfig"
 endmenu
 
 menu "Zephyr Kernel"

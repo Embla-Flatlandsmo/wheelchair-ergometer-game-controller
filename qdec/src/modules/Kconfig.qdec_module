@@ -1,0 +1,27 @@
+menuconfig QDEC_MODULE
+	bool "Quadrature decoder module"
+	default y
+	depends on QDEC_GPIO
+
+if QDEC_MODULE
+
+config QDEC_TIMEOUT_DURATION_MSEC
+	int "Milliseconds elapsed before 0 is output in HID report"
+	default 500
+
+config QDEC_MINIMUM_DELTA_TIME_MSEC
+	int "Minimum milliseconds required for a encoder update to be valid"
+	default 10
+	help
+		"Larger values means there is less susceptibility 
+		to noise but the system might not pick up actual readings"
+
+config QDEC_VELOCITY_LOW_PASS_FILTER_COEFFICIENT
+	int "Alpha for moving average filter. Min 0, max 1000"
+	default 200
+
+endif # QDEC_MODULE
+
+module = QDEC_MODULE
+module-str = QDEC module
+source "subsys/logging/Kconfig.template.log_config"

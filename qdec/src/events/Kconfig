@@ -1,0 +1,37 @@
+#
+# Copyright (c) 2021 Nordic Semiconductor
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+menuconfig EVENTS
+	bool "Event options"
+	default y
+
+if EVENTS
+
+# config APP_EVENTS_LOG
+# 	bool "Enable logging for application module events"
+# 	default y
+
+config QDEC_EVENTS_LOG
+	bool "Enable logging for QDEC module events"
+	default y
+
+if NRF_PROFILER
+
+choice
+	prompt "Event type format for nrf_profiler"
+	default NRF_PROFILER_EVENT_TYPE_INT
+
+config NRF_PROFILER_EVENT_TYPE_STRING
+	bool "Event type as string"
+
+config NRF_PROFILER_EVENT_TYPE_INT
+	bool "Event type as integer"
+
+endchoice
+
+endif # NRF_PROFILER
+
+endif # EVENTS
