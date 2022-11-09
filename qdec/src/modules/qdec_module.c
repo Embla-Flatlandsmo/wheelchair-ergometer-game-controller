@@ -32,9 +32,11 @@ static struct gpio_dt_spec led_a = GPIO_DT_SPEC_GET_OR(DT_ALIAS(led0), gpios,
 static struct gpio_dt_spec led_b = GPIO_DT_SPEC_GET_OR(DT_ALIAS(led1), gpios,
 						     {0});
 
+struct device* qdeca_dev;
+
 static float qdec_a_rot_speed = 0.0;
 static double rot_a = 0.0;
-static double qdec_a_rot_delta = 0.0;
+// static double qdec_a_rot_delta = 0.0;
 static const float alpha = ((float)CONFIG_QDEC_VELOCITY_LOW_PASS_FILTER_COEFFICIENT)/1000.0;
 
 static void send_data_evt(void)
@@ -63,9 +65,27 @@ K_TIMER_DEFINE(data_evt_timeout, data_evt_timeout_handler, NULL);
 
 void data_evt_timeout_work_handler(struct k_work *work)
 {
+	struct sensor_value rot;
+	int err;
+	err = sensor_sample_fetch(qdeca_dev);
+	if (err != 0)
+	{
+		LOG_ERR("sensor_sample_fetch error: %d\n", err);
+		return;
+	}
+	err = sensor_channel_get(qdeca_dev, SENSOR_CHAN_ROTATION, &rot);
+	if (err != 0)
+	{
+		LOG_ERR("sensor_channel_get error: %d\n", err);
+		return;
+	}
+
+	float qdec_a_rot_delta = sensor_value_to_double(&rot);
+	// LOG_DBG("QDECA Delta: %f", qdec_a_rot_delta);
 	float qdec_a_current_speed = qdec_a_rot_delta/dt;
-	qdec_a_rot_delta = 0.0;
 	qdec_a_rot_speed = moving_avg_filter(qdec_a_rot_speed, qdec_a_current_speed);
+
+
 	// float qdec_b_current_speed = qdec_b_rot_delta/dt;
 	// qdec_b_rot_delta = 0.0;
 	// qdec_b_rot_speed = moving_avg_filter(qdec_b_rot_speed, qdec_b_current_speed);
@@ -106,28 +126,29 @@ void data_evt_timeout_work_handler(struct k_work *work)
 
 // K_TIMER_DEFINE(qdec_b_timeout, qdec_b_timeout_handler, NULL);
 
-static void trigger_a_handler(const struct device *dev, const struct sensor_trigger* trig)
-{
-	struct sensor_value rot;
-	int err;
-	err = sensor_sample_fetch(dev);
-	if (err != 0)
-	{
-		LOG_ERR("sensor_sample_fetch error: %d\n", err);
-		return;
-	}
-	err = sensor_channel_get(dev, SENSOR_CHAN_ROTATION, &rot);
-	if (err != 0)
-	{
-		LOG_ERR("sensor_channel_get error: %d\n", err);
-		return;
-	}
+// static void trigger_a_handler(const struct device *dev, const struct sensor_trigger* trig)
+// {
+// 	struct sensor_value rot;
+// 	int err;
+// 	err = sensor_sample_fetch(dev);
+// 	if (err != 0)
+// 	{
+// 		LOG_ERR("sensor_sample_fetch error: %d\n", err);
+// 		return;
+// 	}
+// 	err = sensor_channel_get(dev, SENSOR_CHAN_ROTATION, &rot);
+// 	if (err != 0)
+// 	{
+// 		LOG_ERR("sensor_channel_get error: %d\n", err);
+// 		return;
+// 	}
 
-	double new_rot_a = sensor_value_to_double(&rot);
-	qdec_a_rot_delta += new_rot_a;
-	gpio_pin_set_dt(&led_a, led_a_on);
-	led_a_on = !led_a_on;
-}
+// 	double new_rot_a = sensor_value_to_double(&rot);
+// 	LOG_DBG("rot_a: %f", (float)new_rot_a);
+// 	// qdec_a_rot_delta += new_rot_a;
+// 	gpio_pin_set_dt(&led_a, led_a_on);
+// 	led_a_on = !led_a_on;
+// }
 
 // static void trigger_b_handler(const struct device *dev, const struct sensor_trigger* trig)
 // {
@@ -192,7 +213,8 @@ static int setup_led(void)
 
 static int module_init(void)
 {
-	const struct device* qdeca_dev = device_get_binding(DT_LABEL(DT_NODELABEL(qdeca)));
+	int err;
+	qdeca_dev = device_get_binding(DT_LABEL(DT_NODELABEL(qdeca)));
 	// const struct device* qdecb_dev = device_get_binding(DT_LABEL(DT_NODELABEL(qdecb)));
 	if (qdeca_dev == NULL)
 	{
@@ -200,17 +222,17 @@ static int module_init(void)
 		return -ENODEV;
 	}
 
-	trig_a.type = SENSOR_TRIG_DATA_READY;
-	trig_a.chan = SENSOR_CHAN_ROTATION;
-	// trig_b.type = SENSOR_TRIG_DATA_READY;
-	// trig_b.chan = SENSOR_CHAN_ROTATION;
-	int err;
-	err = sensor_trigger_set(qdeca_dev, &trig_a, trigger_a_handler);
-	if (err)
-	{
-		LOG_ERR("sensor_trigger_set for qdecb error: %d", err);
-		return err;
-	}
+	// trig_a.type = SENSOR_TRIG_DATA_READY;
+	// trig_a.chan = SENSOR_CHAN_ROTATION;
+	// // trig_b.type = SENSOR_TRIG_DATA_READY;
+	// // trig_b.chan = SENSOR_CHAN_ROTATION;
+
+	// err = sensor_trigger_set(qdeca_dev, &trig_a, trigger_a_handler);
+	// if (err)
+	// {
+	// 	LOG_ERR("sensor_trigger_set for qdecb error: %d", err);
+	// 	return err;
+	// }
 
 	err = setup_led();
 	if (err)
