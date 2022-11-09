@@ -45,6 +45,9 @@ static int qdec_gpio_sample_fetch(const struct device *dev, enum sensor_channel 
     struct qdec_gpio_data *data = dev->data;
     unsigned int key = irq_lock();
     data->fetched_counter = data->counter;
+#if !IS_ENABLED(CONFIG_QDEC_GPIO_CUMULATIVE)
+    data->counter = 0;
+#endif
     irq_unlock(key);
 
     return 0;

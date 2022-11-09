@@ -77,7 +77,7 @@ On startup, the device will perform Bluetooth advertisement.
 The device stores which peers it has been paired to. Currently, it can paired to 2 different phones/PCs. This means that the device might not advertise itself (it only does if it has a free slot to store the pairing), or that the device might fail to connect to a paired device in some other way.
 
 To clear these pairing slots, do the following:
-- Reset the device by pressing the "RST" button
+- Reset the device by double tapping the "RST" button
 - Before 5 seconds have passed, press the "SW" button
 
 The device should then clear all the pairing slots which frees it up to try pairing again.
