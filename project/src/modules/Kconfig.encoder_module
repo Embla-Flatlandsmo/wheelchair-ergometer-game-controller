@@ -10,7 +10,7 @@ config ENCODER_TIMEOUT_DURATION_MSEC
 
 config ENCODER_DELTA_TIME_MSEC
 	int "Measuring interval in milliseconds. Used to deduct speed from encoder travel."
-	default 10
+	default 100
 	help
 		"Larger values means there is less susceptibility 
 		to noise but the system might not pick up actual readings"

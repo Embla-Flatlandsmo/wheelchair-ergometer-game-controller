@@ -5,34 +5,32 @@
 
 menu "Application control module"
 
-config APP_WHEELCHAIR_REAR_WHEEL_DIAMETER_CM
-    int "Diameter of the rear wheel of the wheelchair in centimeters"
-    default 61
+# config APP_WHEELCHAIR_REAR_WHEEL_DIAMETER_CM
+#     int "Diameter of the rear wheel of the wheelchair in centimeters"
+#     default 61
 
-config APP_CYLINDER_DIAMETER_CM
+config APP_CYLINDER_DIAMETER_MM
     int "Diameter of cylinder to which encoder is attached"
-    default 20
+    default 785
 
-
-
-config APP_MIN_SPEED_CM_PER_SEC
+config APP_MIN_SPEED_MM_PER_SEC
 	int "Translational speed that maps to no output in HID report"
-	default 2
+	default 20
     help 
         "Uses centimeter per second to get a finer resolution"
 
-config APP_MAX_SPEED_CM_PER_SEC
+config APP_MAX_SPEED_MM_PER_SEC
 	int "Translational speed that maps to max output in HID report"
-	default 50
+	default 500
     help
         "Uses centimeter per second to get a finer resolution"
 
-config APP_MIN_SPEED_DIFF_CM_PER_SEC
+config APP_MIN_SPEED_DIFF_MM_PER_SEC
     int "Minimum speed difference between wheels which maps to no output in HID report"
-    default 2
+    default 20
 
-config APP_MAX_SPEED_DIFF_CM_PER_SEC
+config APP_MAX_SPEED_DIFF_MM_PER_SEC
     int "Maximum speed difference between wheels which maps to max output in HID report"
-    default 50
+    default 500
 
 endmenu

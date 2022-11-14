@@ -161,7 +161,7 @@ static int init_gpio(const struct device *dev)
     struct qdec_gpio_conf *conf = dev->config;
     int err;
     err = gpio_pin_configure_dt(&conf->gpio_a, GPIO_INPUT | GPIO_PULL_UP | GPIO_INT_DEBOUNCE);
-    err |= gpio_pin_interrupt_configure_dt(&conf->gpio_a, GPIO_INT_EDGE_RISING);
+    err |= gpio_pin_interrupt_configure_dt(&conf->gpio_a, GPIO_INT_EDGE_BOTH);
     gpio_init_callback(&conf->gpio_a_cb_c.cb, qdec_line_callback, BIT(conf->gpio_a.pin));
     err |= gpio_add_callback(conf->gpio_a.port, &conf->gpio_a_cb_c.cb);
     if (err)
@@ -171,7 +171,7 @@ static int init_gpio(const struct device *dev)
     }
 
     err = gpio_pin_configure_dt(&conf->gpio_b, GPIO_INPUT | GPIO_PULL_UP | GPIO_INT_DEBOUNCE);
-    err |= gpio_pin_interrupt_configure_dt(&conf->gpio_b, GPIO_INT_EDGE_RISING);
+    err |= gpio_pin_interrupt_configure_dt(&conf->gpio_b, GPIO_INT_EDGE_BOTH);
     gpio_init_callback(&conf->gpio_b_cb_c.cb, qdec_line_callback, BIT(conf->gpio_b.pin));
     err |= gpio_add_callback(conf->gpio_b.port, &conf->gpio_b_cb_c.cb);
     if (err)

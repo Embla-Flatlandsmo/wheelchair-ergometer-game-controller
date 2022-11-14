@@ -24,15 +24,16 @@ struct device* encoder_b_dev;
 static float encoder_a_rot_speed = 0.0;
 static float encoder_b_rot_speed = 0.0;
 
+#define DT_MSEC CONFIG_ENCODER_DELTA_TIME_MSEC
 static const float alpha = ((float)CONFIG_ENCODER_MOVING_AVERAGE_ALPHA)/1000.0;
-static const float dt = (float)CONFIG_ENCODER_DELTA_TIME_MSEC/1000.0;
+static const float dt = (float)DT_MSEC/1000.0;
 
 static void send_data_evt(void)
 {
 	struct encoder_module_event *encoder_module_event = new_encoder_module_event();
 	encoder_module_event->type = ENCODER_EVT_DATA_READY;
 	encoder_module_event->rot_speed_a = encoder_a_rot_speed;
-	encoder_module_event->rot_speed_b = 0.0;
+	encoder_module_event->rot_speed_b = encoder_b_rot_speed;
 	APP_EVENT_SUBMIT(encoder_module_event);
 }
 
@@ -90,8 +91,7 @@ void data_evt_timeout_work_handler(struct k_work *work)
 	float encoder_b_rot_delta = sensor_value_to_double(&rot_b);
 	float encoder_b_current_speed = encoder_b_rot_delta/dt;
 	encoder_b_rot_speed = moving_avg_filter(encoder_b_rot_speed, encoder_b_current_speed);
-
-
+	LOG_DBG("Encoder B rot speed: %f", encoder_b_rot_speed);
 	send_data_evt();
 }
 
@@ -104,7 +104,7 @@ static int module_init(void)
 		LOG_ERR("Failed to get bindings for encoder devices");
 		return -ENODEV;
 	}
-	k_timer_start(&data_evt_timeout, K_NO_WAIT, K_MSEC((int)(1000.0*dt)));
+	k_timer_start(&data_evt_timeout, K_NO_WAIT, K_MSEC(DT_MSEC));
 	return 0;
 }
 

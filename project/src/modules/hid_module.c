@@ -26,11 +26,11 @@ LOG_MODULE_REGISTER(MODULE, CONFIG_HID_MODULE_LOG_LEVEL);
 
 #define M_PI   3.14159265358979323846264338327950288
 
-const float max_speed_m_per_sec = ((float)CONFIG_APP_MAX_SPEED_CM_PER_SEC)/100.0;
-const float min_speed_m_per_sec = ((float)CONFIG_APP_MIN_SPEED_CM_PER_SEC)/100.0;
-const float cylinder_diameter_m = ((float)CONFIG_APP_CYLINDER_DIAMETER_CM)/100.0;
-const float max_speed_diff_m_per_sec = ((float)CONFIG_APP_MAX_SPEED_DIFF_CM_PER_SEC)/100.0;
-const float min_speed_diff_m_per_sec = ((float)CONFIG_APP_MIN_SPEED_DIFF_CM_PER_SEC)/100.0;
+const float max_speed_m_per_sec = ((float)CONFIG_APP_MAX_SPEED_MM_PER_SEC)/1000.0f;
+const float min_speed_m_per_sec = ((float)CONFIG_APP_MIN_SPEED_MM_PER_SEC)/1000.0f;
+const float cylinder_diameter_m = ((float)CONFIG_APP_CYLINDER_DIAMETER_MM)/1000.0f;
+const float max_speed_diff_m_per_sec = ((float)CONFIG_APP_MAX_SPEED_DIFF_MM_PER_SEC)/1000.0f;
+const float min_speed_diff_m_per_sec = ((float)CONFIG_APP_MIN_SPEED_DIFF_MM_PER_SEC)/1000.0f;
 
 
 #define BASE_USB_HID_SPEC_VERSION 0x0101
