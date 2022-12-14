@@ -1,9 +1,9 @@
 # Wheelchair ergometer game controller
 
-This project aims to interface an Invictus Trainer with a computer or a phone by using encoders and an nRF52840.
+This project interfaces an Invictus Trainer with a computer or a phone by using encoders and an nRF52840.
 
 ## Installing the SDK
-The project uses the [Zephyr RTOS](https://docs.zephyrproject.org/latest/) and the [nRF Connect SDK](https://developer.nordicsemi.com/nRF_Connect_SDK/doc/latest/nrf/index.html). To get started, you must download the nRF Connect SDK which comes with the Zephyr RTOS included: [See the installation guide for a how-to](https://developer.nordicsemi.com/nRF_Connect_SDK/doc/2.0.2/nrf/gs_assistant.html)
+The project uses the [Zephyr RTOS](https://docs.zephyrproject.org/latest/) and the [nRF Connect SDK](https://developer.nordicsemi.com/nRF_Connect_SDK/doc/2.1.2/nrf/index.html). To get started, you must download the nRF Connect SDK which comes with the Zephyr RTOS included: [See the installation guide for a how-to](https://developer.nordicsemi.com/nRF_Connect_SDK/doc/2.1.2/nrf/gs_assistant.html)
 
 ## Project Setup
 ### Using an existing nRF Connect SDK installation (recommended)
@@ -11,18 +11,24 @@ The project uses the [Zephyr RTOS](https://docs.zephyrproject.org/latest/) and t
 
 Note: In Zephyr terminology, this is a [Zephyr workspace application](https://docs.zephyrproject.org/latest/develop/application/index.html#zephyr-repository-application)
 
+<!--
+
 ### Creating a new west workspace (currently not working)
-- Ensure all required software for building nRF Connect SDK v2.1.2 is installed. A list of required software and appropriate versions can be found [here](https://developer.nordicsemi.com/nRF_Connect_SDK/doc/2.0.2/nrf/gs_recommended_versions.html).
+- Ensure all required software for building nRF Connect SDK v2.1.2 is installed. A list of required software and appropriate versions can be found [here](https://developer.nordicsemi.com/nRF_Connect_SDK/doc/2.1.2/nrf/gs_recommended_versions.html).
 - Create project directory
 - Inside project directory, run command ```west init -m https://github.com/Embla-Flatlandsmo/wheelchair-ergometer-game-controller.git```. This will set up the west configurations for the project directory.
 - In the same directory, run ```west update```. This will download the project files, nRF Connect SDK v2.1.2, and their dependencies.
 - Run ```west zephyr-export``` so we can successfully build applications.
-- Navigate to folder containing firmware (`wheelchair-ergometer-game-controller`) and use west commands for building and flashing the firmware as described in the [developer guide](https://developer.nordicsemi.com/nRF_Connect_SDK/doc/2.0.2/zephyr/guides/west/build-flash-debug.html#west-build-flash-debug).
+- Navigate to folder containing firmware (`wheelchair-ergometer-game-controller`) and use west commands for building and flashing the firmware as described in the [developer guide](https://developer.nordicsemi.com/nRF_Connect_SDK/doc/2.1.2/zephyr/guides/west/build-flash-debug.html#west-build-flash-debug).
 
+-->
 ## Building
-To build a project, follow [the official nRF Connect SDK guide](https://developer.nordicsemi.com/nRF_Connect_SDK/doc/2.0.2/nrf/gs_programming.html)
+To build a project, follow [the official nRF Connect SDK guide](https://developer.nordicsemi.com/nRF_Connect_SDK/doc/2.1.2/nrf/gs_programming.html)
 
-In short, navigate to `wheelchair-ergometer-game-contrller/project` and call `west build -b nrf52840dk_nrf52840` for building for the nRF52840 DK. Call `west build -b adafruit_itsybitsy_nrf52840` to build for the Adafruit ItsyBitsy nRF52840 Express.
+In short, navigate to the `wheelchair-ergometer-game-contrller` folder (this may be referred to as the root folder in later parts) and call `west build -b nrf52840dk_nrf52840` for building for the nRF52840 DK. Call `west build -b adafruit_itsybitsy_nrf52840` to build for the Adafruit ItsyBitsy nRF52840 Express.
+
+> **NOTE:** Sometimes the building might fail for various reasons. If you get error messages that don't make sense to you, try to do a clean rebuild by either deleting the `wheelchair-ergometer-game-controller/project-code/build` folder or calling `west build -p -b adafruit_itsybitsy_nrf52840`.
+
 
 ## Flashing
 ### nRF52840 DK
@@ -38,10 +44,10 @@ The ItsyBitsy comes with the Adafruit UF2 bootloader. This bootloader must be up
 Flashing a program is done by dragging and dropping a `.uf2`-file into the "drive" when it is in boot mode (double tap the RST button). To generate a `.uf2` file, make sure to enable `CONFIG_BUILD_OUTPUT_UF2=y` in the project configuration (`prj.conf`-file).
 
 To build and flash, perform the following steps:
-1. In the `project` folder, call ```west build -b adafruit_itsybitsy_nrf52840```
-2. Navigate to `project/build/zephyr`
+1. In the root folder, call ```west build -b adafruit_itsybitsy_nrf52840```
+2. Navigate to `build/zephyr` from the root folder
 3. Double tap the `RST` button on the ItsyBitsy to enable bootloader mode
-4. From `project/build/zephyr`, drag `zephyr.uf2` into the removable drive `ITSY840BOOT`.
+4. From `build/zephyr`, drag `zephyr.uf2` into the removable drive `ITSY840BOOT`.
 5. The light on the ItsyBitsy should flicker for a bit before the device disconnects. This means the flash is successful.
 
 > If the ItsyBitsy ever starts pulsating red, it means something is wrong and you might have to reflash the bootloader firmware as described in "First Time Setup".
