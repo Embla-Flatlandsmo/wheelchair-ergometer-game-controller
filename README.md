@@ -7,15 +7,15 @@ The project uses the [Zephyr RTOS](https://docs.zephyrproject.org/latest/) and t
 
 ## Project Setup
 ### Using an existing nRF Connect SDK installation (recommended)
-- Clone this project into the root-level folder of a working [nRF Connect SDK v2.0.2 installation](https://developer.nordicsemi.com/nRF_Connect_SDK/doc/latest/nrf/gs_assistant.html)
+- Clone this project into the root-level folder of a working [nRF Connect SDK v2.1.2 installation](https://developer.nordicsemi.com/nRF_Connect_SDK/doc/latest/nrf/gs_assistant.html)
 
 Note: In Zephyr terminology, this is a [Zephyr workspace application](https://docs.zephyrproject.org/latest/develop/application/index.html#zephyr-repository-application)
 
 ### Creating a new west workspace (currently not working)
-- Ensure all required software for building nRF Connect SDK v2.0.2 is installed. A list of required software and appropriate versions can be found [here](https://developer.nordicsemi.com/nRF_Connect_SDK/doc/2.0.2/nrf/gs_recommended_versions.html).
+- Ensure all required software for building nRF Connect SDK v2.1.2 is installed. A list of required software and appropriate versions can be found [here](https://developer.nordicsemi.com/nRF_Connect_SDK/doc/2.0.2/nrf/gs_recommended_versions.html).
 - Create project directory
 - Inside project directory, run command ```west init -m https://github.com/Embla-Flatlandsmo/wheelchair-ergometer-game-controller.git```. This will set up the west configurations for the project directory.
-- In the same directory, run ```west update```. This will download the project files, nRF Connect SDK v2.0.2, and their dependencies.
+- In the same directory, run ```west update```. This will download the project files, nRF Connect SDK v2.1.2, and their dependencies.
 - Run ```west zephyr-export``` so we can successfully build applications.
 - Navigate to folder containing firmware (`wheelchair-ergometer-game-controller`) and use west commands for building and flashing the firmware as described in the [developer guide](https://developer.nordicsemi.com/nRF_Connect_SDK/doc/2.0.2/zephyr/guides/west/build-flash-debug.html#west-build-flash-debug).
 

@@ -1,4 +1,4 @@
-# Copyright (c) 2022 Embla Flatlandsmo
+# Copyright (c) 2022 Embla Flatlandsmo <embla.flatlandsmo@gmail.com>
 # SPDX-License-Identifier: Apache-2.0
 
 # Suppress "unique_unit_address_if_enabled" to handle the following overlaps:

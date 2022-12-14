@@ -1,17 +1,35 @@
-.. _adafruit_itsybitsy_m4_express:
+.. _adafruit_itsybitsy_nrf52840:
 
-Adafruit ItsyBitsy M4 Express
-#############################
+Adafruit ItsyBitsy nRF52840
+###########################
 
 Overview
 ********
 
-The Adafruit ItsyBitsy nRF52840 Express is a small (36 mm x 18 mm) ARM 
+The Adafruit ItsyBitsy nRF52840 Express is a small (36 mm x 18 mm) ARM
 development board with an onboard RGB LED, USB port, 2 MB of QSPI flash,
 and range of I/O broken out onto 21 GPIO pins.
 
-.. image:: img/adafruit_itsybitsy_nrf52840.png
-     :width: 500px
+This development kit has the following features:
+
+* :abbr:`ADC (Analog to Digital Converter)`
+* CLOCK
+* FLASH
+* :abbr:`GPIO (General Purpose Input Output)`
+* :abbr:`I2C (Inter-Integrated Circuit)`
+* :abbr:`I2S (Inter-Integrated Sound)`
+* :abbr:`MPU (Memory Protection Unit)`
+* :abbr:`NVIC (Nested Vectored Interrupt Controller)`
+* :abbr:`PWM (Pulse Width Modulation)`
+* :abbr:`QSPI (Quad Serial Peripheral Interface)`
+* RADIO (Bluetooth Low Energy and 802.15.4)
+* :abbr:`RTC (nRF RTC System Clock)`
+* :abbr:`SPI (Serial Peripheral Interface)`
+* :abbr:`UARTE (Universal asynchronous receiver-transmitter)`
+* :abbr:`USB (Universal Serial Bus)`
+* :abbr:`WDT (Watchdog Timer)`
+
+.. image:: img/adafruit_itsybitsy_nrf52840.jpeg
      :align: center
      :alt: Adafruit ItsyBitsy nRF52840 Express
 
@@ -21,6 +39,7 @@ Hardware
 - 1 MB of flash memory and 256 KB of SRAM
 - 2 MB of QSPI flash
 - A user LED
+- A user switch
 - An RGB DotStar LED
 - Native USB port
 - One reset button
@@ -28,7 +47,7 @@ Hardware
 Supported Features
 ==================
 
-The Adafruit Feather nRF52840 board configuration supports the
+The Adafruit ItsyBitsy nRF52840 board configuration supports the
 following hardware features:
 
 +-----------+------------+----------------------+
@@ -50,6 +69,8 @@ following hardware features:
 +-----------+------------+----------------------+
 | PWM       | on-chip    | pwm                  |
 +-----------+------------+----------------------+
+| QSPI(M)   | on-chip    | nor                  |
++-----------+------------+----------------------+
 | RADIO     | on-chip    | Bluetooth,           |
 |           |            | ieee802154           |
 +-----------+------------+----------------------+
@@ -57,7 +78,7 @@ following hardware features:
 +-----------+------------+----------------------+
 | SPI       | on-chip    | spi                  |
 +-----------+------------+----------------------+
-| UART      | on-chip    | serial               |
+| UARTE     | on-chip    | serial               |
 +-----------+------------+----------------------+
 | USB       | on-chip    | usb                  |
 +-----------+------------+----------------------+
@@ -76,15 +97,25 @@ LED
 ---
 
 * LED0 (red) = P0.06
+
 * LED1 (Adafruit DotStar)
+
     * DATA = P0.08
+
     * CLK = P1.09
 
 Push buttons
 ------------
 
 * SWITCH = P0.29
+
 * RESET = P0.18
+
+Logging
+-------
+
+Logging is done using the USB-CDC port. See the :ref:`logger_sample`
+or the :ref:`cdc-acm-console` sample applications to see how this works.
 
 Testing LEDs and buttons on the Adafruit ItsyBitsy nRF52840 Express
 *******************************************************************
@@ -105,16 +136,22 @@ bootloader can be entered by quickly tapping the reset button twice.
 
 First time setup
 ================
-Some versions of this board were shipped with a buggy bootloader. 
+Some versions of this board were shipped with a buggy bootloader.
 Ensure that the bootloader is up to date by following the
-`Adafruit UF2 Bootloader update`_ tutorial.
+`Adafruit UF2 Bootloader update`_ tutorial. Note that this tutorial
+was made for the Adafruit Feather nRF52840, but the steps to update
+the bootloader are the same for the ItsyBitsy. The files for the
+ItsyBitsy bootloader can be found in the `Adafruit nRF52 Bootloader repo`_.
+
+The building and flashing of Zephyr applications have been tested with
+release 0.7.0 of the UF2 bootloader.
 
 Flashing
 ========
-Flashing is done by dragging and dropping the built Zephyr UF2-file 
+Flashing is done by dragging and dropping the built Zephyr UF2-file
 into the :code:`ITSY840BOOT` drive.
 
-#. Build the Zephyr kernel and the :ref:`blinky-sample` 
+#. Build the Zephyr kernel and the :ref:`blinky-sample`
    sample application:
 
    .. zephyr-app-commands::
@@ -132,7 +169,7 @@ into the :code:`ITSY840BOOT` drive.
    Drag and drop the file :code:`samples/basic/blinky/build/zephyr/zephyr.uf2`
    into :code:`ITSY840BOOT`
 
-The device will disconnect and you should should see the red LED blink.
+The device will disconnect and you should see the red LED blink.
 
 References
 **********
@@ -150,3 +187,6 @@ References
 
 .. _Adafruit UF2 Bootloader update:
     https://learn.adafruit.com/introducing-the-adafruit-nrf52840-feather/update-bootloader
+
+.. _Adafruit nRF52 Bootloader repo:
+    https://github.com/adafruit/Adafruit_nRF52_Bootloader/releases

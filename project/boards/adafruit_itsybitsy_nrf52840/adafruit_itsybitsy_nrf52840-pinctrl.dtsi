@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Embla Flatlandsmo
+ * Copyright (c) 2022 Embla Flatlandsmo <embla.flatlandsmo@gmail.com>
  * SPDX-License-Identifier: Apache-2.0
  */
 
@@ -34,17 +34,18 @@
 		};
 	};
 
-	spi0_default: spi0_default {
+	spi2_default: spi2_default {
 		group1 {
 			psels = <NRF_PSEL(SPIM_SCK, 1, 9)>,
-					<NRF_PSEL(SPIM_MOSI, 0, 8)>;
+				<NRF_PSEL(SPIM_MOSI, 0, 8)>;
 		};
 	};
 
-	spi0_sleep: spi0_sleep {
+	spi2_sleep: spi2_sleep {
 		group1 {
 			psels = <NRF_PSEL(SPIM_SCK, 1, 9)>,
-					<NRF_PSEL(SPIM_MOSI, 0, 8)>;
+				<NRF_PSEL(SPIM_MOSI, 0, 8)>;
+			low-power-enable;
 		};
 	};
 
@@ -87,5 +88,4 @@
 			low-power-enable;
 		};
 	};
-
 };
