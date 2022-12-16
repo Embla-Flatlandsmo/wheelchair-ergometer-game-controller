@@ -52,22 +52,50 @@ static struct bt_conn *cur_conn;
 static bool secured;
 static bool protocol_boot;
 
+/**
+ * @brief Converts rotational speed to meters per second. Note: This is just like
+ * multiplying with a constant and so this function should be removed in a future
+ * iteration of the software.
+ * 
+ * @param rot_speed_deg_per_second rotational speed in degrees per second 
+ * @return float translational speed in meters per second
+ */
 static float rot_speed_to_meters_per_second(float rot_speed_deg_per_second)
 {
     float rot_speed_rad_per_second = rot_speed_deg_per_second * M_PI / 180.0;
     return cylinder_diameter_m/2.0 * rot_speed_rad_per_second;
 }
 
+/**
+ * @brief Calculate the average of the two input values
+ * 
+ * @param wheel_a_speed 
+ * @param wheel_b_speed 
+ * @return float Average of the two input values
+ */
 static float wheel_speed_avg(float wheel_a_speed, float wheel_b_speed)
 {
     return (wheel_a_speed + wheel_b_speed) / 2.0;
 }
 
+/**
+ * @brief Calculate the difference between the two input values
+ * 
+ * @param wheel_a_speed 
+ * @param wheel_b_speed 
+ * @return float difference between the two input values
+ */
 static float wheel_speed_difference(float wheel_a_speed, float wheel_b_speed)
 {
     return wheel_a_speed - wheel_b_speed;
 }
 
+/**
+ * @brief Enforce deadzone and clamp values that exceed the maximum value
+ * 
+ * @param speed_m_per_sec speed
+ * @return float clamped/processed speed
+ */
 static float speed_limits(float speed_m_per_sec)
 {
     if (IN_RANGE(speed_m_per_sec, -min_speed_m_per_sec, min_speed_m_per_sec)) {
@@ -76,6 +104,16 @@ static float speed_limits(float speed_m_per_sec)
     return CLAMP(speed_m_per_sec, -max_speed_m_per_sec, max_speed_m_per_sec);
 }
 
+/**
+ * @brief Linearly maps a value in the range [a,b] to the range [c,d]
+ * 
+ * @param value Value to map
+ * @param input_start Start of the input range
+ * @param input_end End of the input range
+ * @param output_start Start of the output range
+ * @param output_end End of the output range
+ * @return uint8_t Mapped input value
+ */
 static uint8_t map_range(float value, float input_start, float input_end, uint8_t output_start, uint8_t output_end)
 {
     float input_decimal = (value-input_start)/(input_end-input_start);
@@ -109,6 +147,13 @@ static int module_init(void)
     return bt_hids_init(&hids_obj, &hids_init_param);
 }
 
+/**
+ * @brief Converts encoder event into difference and average speeds
+ * 
+ * @param event encoder event containing rotational speed data for the two encoders
+ * @param[out] wheel_difference Filtered and mapped difference of the values in the event
+ * @param[out] wheel_avg Filtered and mapped average of the values in the event
+ */
 static void encoder_event_to_speed(const struct encoder_module_event *event, uint8_t* wheel_difference, uint8_t* wheel_avg)
 {
     if (event->type != ENCODER_EVT_DATA_READY)
@@ -130,6 +175,12 @@ static void encoder_event_to_speed(const struct encoder_module_event *event, uin
     LOG_DBG("Wheel_avg: %d, wheel_diff: %d", *wheel_avg, *wheel_difference);
 }
 
+/**
+ * @brief Sends a HID report to the currently connected device
+ * 
+ * @param x_axis x-axis value of "joystick"
+ * @param y_axis y-axis value of "joystick"
+ */
 static void send_hid_report(uint8_t x_axis, uint8_t y_axis)
 {
     // for (size_t i = 0; i < CONFIG_BT_HIDS_MAX_CLIENT_COUNT; i++) {
@@ -176,6 +227,11 @@ static void send_hid_report(uint8_t x_axis, uint8_t y_axis)
 //     }
 // }
 
+/**
+ * @brief Notifies the bt_hids subsystem of the connection state
+ * 
+ * @param event event containing information about peer connection
+ */
 static void notify_hids(const struct ble_peer_event *event)
 {
     int err = 0;
@@ -243,6 +299,9 @@ static void notify_hids(const struct ble_peer_event *event)
     }
 }
 
+/**
+ * @brief Main event listener for the module. Receives and processes all events.
+ */
 static bool app_event_handler(const struct app_event_header *aeh)
 {
     if (is_encoder_module_event(aeh))

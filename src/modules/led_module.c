@@ -64,6 +64,11 @@ static struct module_data self = {
 
 static const struct device* led_dev = DEVICE_DT_GET_ANY(apa_apa102);
 
+/**
+ * @brief Set the light color of the LED
+ * 
+ * @param color color to set
+ */
 void set_light_color(led_color_t color)
 {
 	struct led_rgb cols[1] = {
@@ -72,6 +77,13 @@ void set_light_color(led_color_t color)
 	led_strip_update_rgb(led_dev, cols, 1);
 }
 
+/**
+ * @brief Sets the LED in a specified color, number of blinks and blink length
+ * 
+ * @param num_blinks Number of times the LED should blink
+ * @param blink_length_msec Length of the blinking interval (msec for on-state, off is length/2)
+ * @param color color to blink the led
+ */
 void led_blink(int num_blinks, int blink_length_msec, led_color_t color)
 {
 	// set_light_color(color);
@@ -102,6 +114,13 @@ void led_blink(int num_blinks, int blink_length_msec, led_color_t color)
 }
 
 /*================= EVENT HANDLERS =================*/
+
+/**
+ * @brief Sets light blink color, number of blinks and blink duration based on event
+ * 
+ * @param event event containing information about bluetooth connection
+ * @return struct led_msg_data information about how to blink the light
+ */
 static struct led_msg_data blink_data_from_peer_event(const struct ble_peer_event *event)
 {
 	struct led_msg_data blink_data;
@@ -137,6 +156,13 @@ static struct led_msg_data blink_data_from_peer_event(const struct ble_peer_even
 }
 
 
+
+/**
+ * @brief Sets light blink color, number of blinks and blink duration based on event
+ * 
+ * @param event event containing information about bluetooth connection
+ * @return struct led_msg_data information about how to blink the light
+ */
 static struct led_msg_data blink_data_from_peer_search_event(const struct ble_peer_search_event *event)
 {
 	struct led_msg_data blink_data;
@@ -153,6 +179,13 @@ static struct led_msg_data blink_data_from_peer_search_event(const struct ble_pe
 	return blink_data;
 }
 
+/**
+ * @brief Handles incoming subscribed events
+ * 
+ * @param aeh 
+ * @return true 
+ * @return false 
+ */
 static bool app_event_handler(const struct app_event_header *aeh)
 {
 	struct led_msg_data msg = {0};

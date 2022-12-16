@@ -22,18 +22,7 @@ extern "C" {
 
 /** @brief ENCODER event types submitted by ENCODER module. */
 enum encoder_module_event_type {
-	/** All data has been received for a given sample request. */
 	ENCODER_EVT_DATA_READY,
-
-	/** Send newly sampled data.
-	 *  The event has an associated payload of type @ref data_module_data_buffers in
-	 *  the `data.buffer` member.
-	 *
-	 *  If a non LwM2M build is used the data is heap allocated and must be freed after use by
-	 *  calling k_free() on `data.buffer.buf`.
-	 */
-	ENCODER_A_EVT_DATA_SEND,
-	ENCODER_B_EVT_DATA_SEND,
 
 	/** The data module has performed all procedures to prepare for
 	 *  a shutdown of the system. The event carries the ID (id) of the module.
@@ -46,11 +35,11 @@ enum encoder_module_event_type {
 	ENCODER_EVT_ERROR
 };
 
-/** @brief Data module event. */
+/** @brief Encoder module event. */
 struct encoder_module_event {
-	/** Data module application event header. */
+	/** Encoder module application event header. */
 	struct app_event_header header;
-	/** Data module event type. */
+	/** Encoder module event type. */
 	enum encoder_module_event_type type;
 
 	float rot_speed_a;

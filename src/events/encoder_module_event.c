@@ -12,10 +12,6 @@
 static char *get_evt_type_str(enum encoder_module_event_type type)
 {
 	switch (type) {
-	case ENCODER_A_EVT_DATA_SEND:
-		return "ENCODER_A_EVT_DATA_SEND";
-	case ENCODER_B_EVT_DATA_SEND:
-		return "ENCODER_B_EVT_DATA_SEND";
 	case ENCODER_EVT_DATA_READY:
 		return "ENCODER_EVT_DATA_READY";
 	case ENCODER_EVT_SHUTDOWN_READY:

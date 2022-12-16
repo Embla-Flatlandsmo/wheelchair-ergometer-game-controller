@@ -3,11 +3,7 @@
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 #
 
-menu "Application control module"
-
-# config APP_WHEELCHAIR_REAR_WHEEL_DIAMETER_CM
-#     int "Diameter of the rear wheel of the wheelchair in centimeters"
-#     default 61
+menu "Device-wide (Application) settings"
 
 config APP_CYLINDER_DIAMETER_MM
     int "Diameter of cylinder to which encoder is attached"

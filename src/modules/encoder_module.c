@@ -52,6 +52,11 @@ void data_evt_timeout_handler(struct k_timer *dummy)
 
 K_TIMER_DEFINE(data_evt_timeout, data_evt_timeout_handler, NULL);
 
+/**
+ * @brief Processes data upon timeout of the periodic poller
+ * 
+ * @param work 
+ */
 void data_evt_timeout_work_handler(struct k_work *work)
 {
 	struct sensor_value rot_a, rot_b;
@@ -95,6 +100,7 @@ void data_evt_timeout_work_handler(struct k_work *work)
 	send_data_evt();
 }
 
+
 static int module_init(void)
 {
 	encoder_a_dev = device_get_binding(DT_LABEL(DT_NODELABEL(qdeca)));
@@ -108,9 +114,13 @@ static int module_init(void)
 	return 0;
 }
 
+/**
+ * @brief Main event listener for the module. Receives and processes all events.
+ */
 static bool app_event_handler(const struct app_event_header *aeh)
 {
 	if (is_module_state_event(aeh)) {
+		// Device startup event
 		const struct module_state_event *event = cast_module_state_event(aeh);
 
 		if (check_state(event, MODULE_ID(main), MODULE_STATE_READY)) {
