@@ -102,6 +102,16 @@ void module_purge_queue(struct module_data *module);
  */
 int module_get_next_msg(struct module_data *module, void *msg);
 
+
+/** @brief Non-blocking get of next message in a module's queue.
+ *
+ *  @param[in] module Pointer to a structure containing module metadata.
+ *  @param[out] msg Pointer to a message buffer that the output will be written to.
+ *
+ *  @return 0 if a message was read, -EAGAIN if no message was received.
+ */
+int module_get_next_msg_no_wait(struct module_data *module, void *msg);
+
 /** @brief Enqueue message to a module's queue.
  *
  *  @param[in] module Pointer to a structure containing module metadata.

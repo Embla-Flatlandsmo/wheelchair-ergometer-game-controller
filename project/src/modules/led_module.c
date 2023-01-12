@@ -29,6 +29,11 @@ static const struct led_rgb colors[] = {
 	{ .r = 0,					.g = 0,						.b = 0,						}, /* black */
 };
 
+enum blink_type_index {
+	ACTIVE,
+	BACKGROUND,
+};
+
 typedef enum
 {
 	RED,
@@ -50,6 +55,7 @@ struct led_msg_data {
 	int num_blinks;
 	int blink_duration_msec;
 	led_color_t blink_color;
+	int blink_type;
 };
 
 
@@ -70,6 +76,14 @@ void set_light_color(led_color_t color)
 		colors[color],
 	};
 	led_strip_update_rgb(led_dev, cols, 1);
+}
+
+void led_blink_once(int blink_length_msec, led_color_t color)
+{
+	set_light_color(color);
+	k_sleep(K_MSEC(blink_length_msec));
+	set_light_color(BLACK);
+	k_sleep(K_MSEC((int)(blink_length_msec/2.0)));
 }
 
 void led_blink(int num_blinks, int blink_length_msec, led_color_t color)
@@ -105,6 +119,7 @@ void led_blink(int num_blinks, int blink_length_msec, led_color_t color)
 static struct led_msg_data blink_data_from_peer_event(const struct ble_peer_event *event)
 {
 	struct led_msg_data blink_data;
+	blink_data.blink_type = ACTIVE;
 	switch (event->state)
 	{
 		case PEER_STATE_DISCONNECTED:
@@ -140,10 +155,11 @@ static struct led_msg_data blink_data_from_peer_event(const struct ble_peer_even
 static struct led_msg_data blink_data_from_peer_search_event(const struct ble_peer_search_event *event)
 {
 	struct led_msg_data blink_data;
+	blink_data.blink_type = BACKGROUND;
 	if (event->active)
 	{
 		blink_data.blink_color = BLUE;
-		blink_data.num_blinks = 2;
+		blink_data.num_blinks = 10;
 		blink_data.blink_duration_msec = LONG_BLINK;
 	} else {
 		blink_data.blink_color = BLACK;
@@ -225,10 +241,27 @@ static void module_thread_fn(void)
 		LOG_ERR("setup, error: %d", err);
 	}
 	LOG_DBG("LED Module initialized");
-	led_blink(3, SHORT_BLINK, GREEN);
+	led_blink(1, LONG_BLINK, GREEN);
+	int current_blink_type = BACKGROUND;
+	int remaining_blinks = 0;
 	while (true) {
-		module_get_next_msg(&self, &msg);
-		led_blink(msg.num_blinks, msg.blink_duration_msec, msg.blink_color);
+		if (current_blink_type == BACKGROUND)
+		{
+			err = module_get_next_msg_no_wait(&self, &msg);
+			if (!err)
+			{
+			current_blink_type = msg.blink_type;
+			remaining_blinks = msg.num_blinks;
+			}
+		}
+		if (remaining_blinks == 0)
+		{
+			module_get_next_msg(&self, &msg);
+			current_blink_type = msg.blink_type;
+			remaining_blinks = msg.num_blinks;
+		}
+		led_blink_once(msg.blink_duration_msec, msg.blink_color);
+		remaining_blinks--;
 	}
 }
 

@@ -66,8 +66,8 @@ On startup, the device will perform Bluetooth advertisement.
 ### Adafruit ItsyBitsy nRF52840 light explanation
 | Color | Number of times | Duration | Meaning |
 | ----- | --------------- | -------- | ------- |
-| Green | 3 | Short | The device successfully booted |
-| Blue | 2 | Long | The device is advertising itself as "Wheelchair Ergometer". It should be found when you scan for it.
+| Green | 1 | Long | The device successfully booted |
+| Blue | 10 | Long | The device is advertising itself as "Wheelchair Ergometer". It should be found when you scan for it. |
 | Orange | 2 |  Medium | The device is connected but the connection is not secure. | 
 | Green |  2 | Medium | The device is connected and the connection is secure | 
 | Red | 5 | Short | The device failed to connect to its peer |
