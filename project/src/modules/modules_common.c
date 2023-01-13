@@ -69,7 +69,7 @@ int module_get_next_msg_no_wait(struct module_data *module, void *msg)
 	int err = k_msgq_get(module->msg_q, msg, K_NO_WAIT);
 	if (err)
 	{
-		return;
+		return err;
 	}
 
 	if (err == 0 && IS_ENABLED(CONFIG_MODULES_COMMON_LOG_LEVEL_DBG)) {

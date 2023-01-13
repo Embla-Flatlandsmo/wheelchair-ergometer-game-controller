@@ -20,12 +20,19 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(MODULE, CONFIG_LED_MODULE_LOG_LEVEL);
 
-const float light_intensity = 0.2;
+const float light_intensity = 0.1;
+// static const struct led_rgb colors[] = {
+// 	{ .r = 255*light_intensity, .g = 0,						.b = 0,						}, /* red */
+// 	{ .r = 0,					.g = 255*light_intensity,	.b = 0,						}, /* green */
+// 	{ .r = 0,					.g = 0,						.b = 255*light_intensity,	}, /* blue */
+// 	{ .r = 255*light_intensity,	.g = 165*light_intensity,	.b = 0,						}, /* orange */
+// 	{ .r = 0,					.g = 0,						.b = 0,						}, /* black */
+// };
 static const struct led_rgb colors[] = {
-	{ .r = 255*light_intensity, .g = 0,						.b = 0,						}, /* red */
-	{ .r = 0,					.g = 255*light_intensity,	.b = 0,						}, /* green */
-	{ .r = 0,					.g = 0,						.b = 255*light_intensity,	}, /* blue */
-	{ .r = 255*light_intensity,	.g = 165*light_intensity,	.b = 0,						}, /* orange */
+	{ .r = 25, .g = 0,						.b = 0,						}, /* red */
+	{ .r = 0,					.g = 25,	.b = 0,						}, /* green */
+	{ .r = 0,					.g = 0,						.b = 25,	}, /* blue */
+	{ .r = 25,	.g = 165*light_intensity,	.b = 0,						}, /* orange */
 	{ .r = 0,					.g = 0,						.b = 0,						}, /* black */
 };
 
