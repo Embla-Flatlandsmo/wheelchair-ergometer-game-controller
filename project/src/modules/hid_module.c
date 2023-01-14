@@ -44,21 +44,30 @@ const float min_speed_diff_m_per_sec = ((float)CONFIG_APP_MIN_SPEED_DIFF_MM_PER_
 // /* Id of reference to Game pad Input Report containing movement data. */
 // #define INPUT_REP_REF_MOVEMENT_ID 1
 
-#define INPUT_REP_REF_BUTTONS_ID 1
+// #define INPUT_REP_REF_BUTTONS_ID 1
+// #define INPUT_REP_REF_JOYSTICK_ID 2
+// /* Length of Game Pad Input Report containing button data. */
+// #define INPUT_REP_BUTTONS_NUM_BYTES 2
+// /* Length of Game Pad Input Report containing joystick data. */
+// #define INPUT_REP_JOYSTICK_NUM_BYTES 4
+// /* Index of Game pad Input Report containing buttons data. */
+// #define INPUT_REP_BUTTON_INDEX 0
+// /* Index of Game pad Input Report containing joystick data. */
+// #define INPUT_REP_JOYSTICK_INDEX 1
+
 #define INPUT_REP_REF_JOYSTICK_ID 2
-/* Length of Game Pad Input Report containing button data. */
-#define INPUT_REP_BUTTONS_NUM_BYTES 2
 /* Length of Game Pad Input Report containing joystick data. */
-#define INPUT_REP_JOYSTICK_NUM_BYTES 4
-/* Index of Game pad Input Report containing buttons data. */
-#define INPUT_REP_BUTTON_INDEX 0
+#define INPUT_REP_JOYSTICK_NUM_BYTES 2
 /* Index of Game pad Input Report containing joystick data. */
-#define INPUT_REP_JOYSTICK_INDEX 1
+#define INPUT_REP_JOYSTICK_INDEX 0
+
+
 
 /* HIDS instance. */
 BT_HIDS_DEF(hids_obj,
-            INPUT_REP_BUTTONS_NUM_BYTES,
-            INPUT_REP_JOYSTICK_NUM_BYTES);
+            // INPUT_REP_BUTTONS_NUM_BYTES,
+            INPUT_REP_JOYSTICK_NUM_BYTES
+            );
 
 static struct bt_conn *cur_conn;
 static bool secured;
@@ -113,12 +122,12 @@ static int module_init(void)
     struct bt_hids_inp_rep *hids_input_report =
         &hids_init_param.inp_rep_group_init.reports[0];
 
-    hids_input_report->size = INPUT_REP_BUTTONS_NUM_BYTES;
-	hids_input_report->id = INPUT_REP_REF_BUTTONS_ID;
-	hids_input_report->rep_mask = NULL;
-	hids_init_param.inp_rep_group_init.cnt++;
+    // hids_input_report->size = INPUT_REP_BUTTONS_NUM_BYTES;
+	// hids_input_report->id = INPUT_REP_REF_BUTTONS_ID;
+	// hids_input_report->rep_mask = NULL;
+	// hids_init_param.inp_rep_group_init.cnt++;
 
-    hids_input_report++;
+    // hids_input_report++;
     hids_input_report->size = INPUT_REP_JOYSTICK_NUM_BYTES;
 	hids_input_report->id = INPUT_REP_REF_JOYSTICK_ID;
 	hids_input_report->rep_mask = NULL;
@@ -151,11 +160,11 @@ static void encoder_event_to_speed(const struct encoder_module_event *event, uin
 static void send_hid_report(uint8_t x_axis, uint8_t y_axis)
 {
     // for (size_t i = 0; i < CONFIG_BT_HIDS_MAX_CLIENT_COUNT; i++) {
-    if (!cur_conn)
+    if (!cur_conn || !secured)
     {
         return;
     }
-    uint8_t buffer[4] = {0, 0, 0, 0};
+    uint8_t buffer[2] = {0, 0};
 
     int err;
     err = bt_hids_inp_rep_send(&hids_obj, cur_conn,
@@ -168,17 +177,17 @@ static void send_hid_report(uint8_t x_axis, uint8_t y_axis)
         // hid_report_sent(cur_conn, report_id, true);
     }
 
-    uint8_t btns[2] = {0,0};
+    // uint8_t btns[2] = {0,0};
 
-        err = bt_hids_inp_rep_send(&hids_obj, cur_conn,
-                    INPUT_REP_BUTTON_INDEX,
-                    btns, sizeof(btns), NULL);
+    //     err = bt_hids_inp_rep_send(&hids_obj, cur_conn,
+    //                 INPUT_REP_BUTTON_INDEX,
+    //                 btns, sizeof(btns), NULL);
 
-    if (err)
-    {
-        LOG_ERR("Cannot send report (%d)", err);
-        return;
-    }
+    // if (err)
+    // {
+    //     LOG_ERR("Cannot send report (%d)", err);
+    //     return;
+    // }
     
     // LOG_DBG("HID report successfully sent. x-axis val: %d, y-axis val: %d", buffer[0], buffer[1]);
     // }
