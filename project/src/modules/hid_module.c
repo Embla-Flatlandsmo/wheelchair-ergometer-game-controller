@@ -177,17 +177,17 @@ static void send_hid_report(uint8_t x_axis, uint8_t y_axis)
         return;
     }
 
-    uint8_t btns[2] = {y_axis,y_axis};
+    // uint8_t btns[2] = {y_axis,y_axis};
 
-        err = bt_hids_inp_rep_send(&hids_obj, cur_conn,
-                    INPUT_REP_BUTTON_INDEX,
-                    btns, sizeof(btns), NULL);
+    //     err = bt_hids_inp_rep_send(&hids_obj, cur_conn,
+    //                 INPUT_REP_BUTTON_INDEX,
+    //                 btns, sizeof(btns), NULL);
 
-    if (err)
-    {
-        LOG_ERR("Cannot send buttons report (%d)", err);
-        return;
-    }
+    // if (err)
+    // {
+    //     LOG_ERR("Cannot send buttons report (%d)", err);
+    //     return;
+    // }
     
     LOG_DBG("HID report successfully sent.");
     // }
