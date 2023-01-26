@@ -20,13 +20,19 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(MODULE, CONFIG_LED_MODULE_LOG_LEVEL);
 
-const float light_intensity = 0.2;
+const float light_intensity = 0.1;
 static const struct led_rgb colors[] = {
 	{ .r = 255*light_intensity, .g = 0,						.b = 0,						}, /* red */
 	{ .r = 0,					.g = 255*light_intensity,	.b = 0,						}, /* green */
 	{ .r = 0,					.g = 0,						.b = 255*light_intensity,	}, /* blue */
 	{ .r = 255*light_intensity,	.g = 165*light_intensity,	.b = 0,						}, /* orange */
 	{ .r = 0,					.g = 0,						.b = 0,						}, /* black */
+};
+
+
+enum blink_type_index {
+	ACTIVE,
+	BACKGROUND,
 };
 
 typedef enum
@@ -50,6 +56,7 @@ struct led_msg_data {
 	int num_blinks;
 	int blink_duration_msec;
 	led_color_t blink_color;
+	int blink_type;
 };
 
 
@@ -64,11 +71,6 @@ static struct module_data self = {
 
 static const struct device* led_dev = DEVICE_DT_GET_ANY(apa_apa102);
 
-/**
- * @brief Set the light color of the LED
- * 
- * @param color color to set
- */
 void set_light_color(led_color_t color)
 {
 	struct led_rgb cols[1] = {
@@ -77,32 +79,16 @@ void set_light_color(led_color_t color)
 	led_strip_update_rgb(led_dev, cols, 1);
 }
 
-/**
- * @brief Sets the LED in a specified color, number of blinks and blink length
- * 
- * @param num_blinks Number of times the LED should blink
- * @param blink_length_msec Length of the blinking interval (msec for on-state, off is length/2)
- * @param color color to blink the led
- */
+void led_blink_once(int blink_length_msec, led_color_t color)
+{
+	set_light_color(color);
+	k_sleep(K_MSEC(blink_length_msec));
+	set_light_color(BLACK);
+	k_sleep(K_MSEC((int)(blink_length_msec/2.0)));
+}
+
 void led_blink(int num_blinks, int blink_length_msec, led_color_t color)
 {
-	// set_light_color(color);
-	// k_sleep(K_MSEC(blink_length_msec));
-	// set_light_color(BLACK)
-	// // k_sleep(K_MSEC((int)(blink_length_msec/2.0)));
-	// struct led_msg_data msg;
-	// if (num_blinks == BLINK_INDEFINITE)
-	// {
-	// 	msg.num_blinks = num_blinks;
-	// } else if (num_blinks == 0) {
-	// 	return;
-	// } else {
-	// 	msg.num_blinks = num_blinks-1;
-	// }
-	// msg.blink_duration_msec = blink_length_msec;
-	// msg.blink_color = color;
-
-	// int err = module_enqueue_msg_with_delay(&self, &msg);
 	for (int i = 0; i < num_blinks; i++)
 	{
 		set_light_color(color);
@@ -114,16 +100,10 @@ void led_blink(int num_blinks, int blink_length_msec, led_color_t color)
 }
 
 /*================= EVENT HANDLERS =================*/
-
-/**
- * @brief Sets light blink color, number of blinks and blink duration based on event
- * 
- * @param event event containing information about bluetooth connection
- * @return struct led_msg_data information about how to blink the light
- */
 static struct led_msg_data blink_data_from_peer_event(const struct ble_peer_event *event)
 {
 	struct led_msg_data blink_data;
+	blink_data.blink_type = ACTIVE;
 	switch (event->state)
 	{
 		case PEER_STATE_DISCONNECTED:
@@ -144,7 +124,7 @@ static struct led_msg_data blink_data_from_peer_event(const struct ble_peer_even
 		case PEER_STATE_CONN_FAILED:
 			blink_data.blink_color = RED;
 			blink_data.num_blinks = 5;
-			blink_data.blink_duration_msec = SHORT_BLINK;
+			blink_data.blink_duration_msec = MEDIUM_BLINK;
 			break;
 		default:
 			blink_data.blink_color = BLACK;
@@ -156,20 +136,14 @@ static struct led_msg_data blink_data_from_peer_event(const struct ble_peer_even
 }
 
 
-
-/**
- * @brief Sets light blink color, number of blinks and blink duration based on event
- * 
- * @param event event containing information about bluetooth connection
- * @return struct led_msg_data information about how to blink the light
- */
 static struct led_msg_data blink_data_from_peer_search_event(const struct ble_peer_search_event *event)
 {
 	struct led_msg_data blink_data;
+	blink_data.blink_type = BACKGROUND;
 	if (event->active)
 	{
 		blink_data.blink_color = BLUE;
-		blink_data.num_blinks = 2;
+		blink_data.num_blinks = 10;
 		blink_data.blink_duration_msec = LONG_BLINK;
 	} else {
 		blink_data.blink_color = BLACK;
@@ -179,13 +153,6 @@ static struct led_msg_data blink_data_from_peer_search_event(const struct ble_pe
 	return blink_data;
 }
 
-/**
- * @brief Handles incoming subscribed events
- * 
- * @param aeh 
- * @return true 
- * @return false 
- */
 static bool app_event_handler(const struct app_event_header *aeh)
 {
 	struct led_msg_data msg = {0};
@@ -258,10 +225,27 @@ static void module_thread_fn(void)
 		LOG_ERR("setup, error: %d", err);
 	}
 	LOG_DBG("LED Module initialized");
-	led_blink(3, SHORT_BLINK, GREEN);
+	led_blink(1, LONG_BLINK, GREEN);
+	int current_blink_type = BACKGROUND;
+	int remaining_blinks = 0;
 	while (true) {
-		module_get_next_msg(&self, &msg);
-		led_blink(msg.num_blinks, msg.blink_duration_msec, msg.blink_color);
+		if (current_blink_type == BACKGROUND)
+		{
+			err = module_get_next_msg_no_wait(&self, &msg);
+			if (!err)
+			{
+			current_blink_type = msg.blink_type;
+			remaining_blinks = msg.num_blinks;
+			}
+		}
+		if (remaining_blinks == 0)
+		{
+			module_get_next_msg(&self, &msg);
+			current_blink_type = msg.blink_type;
+			remaining_blinks = msg.num_blinks;
+		}
+		led_blink_once(msg.blink_duration_msec, msg.blink_color);
+		remaining_blinks--;
 	}
 }
 

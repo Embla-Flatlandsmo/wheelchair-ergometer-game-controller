@@ -7,7 +7,7 @@
 		label = "quadrature encoder A";
 		line-a-gpios = <&gpio1 8 0>;
 		line-b-gpios = <&gpio0 7 0>;
-		ticks-per-rotation = <96>;
+		ticks-per-rotation = <12>;
 	};
 
 	qdecB: qdecB {
@@ -16,7 +16,7 @@
 		label = "quadrature encoder B";
 		line-a-gpios = <&gpio0 11 0>;
 		line-b-gpios = <&gpio0 12 0>;
-		ticks-per-rotation = <96>;
+		ticks-per-rotation = <12>;
 	};
 
 };

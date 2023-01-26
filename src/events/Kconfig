@@ -10,6 +10,10 @@ menuconfig EVENTS
 
 if EVENTS
 
+# config APP_EVENTS_LOG
+# 	bool "Enable logging for application module events"
+# 	default y
+
 config ENCODER_EVENTS_LOG
 	bool "Enable logging for BLE module events"
 	default y

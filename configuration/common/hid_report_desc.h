@@ -16,19 +16,6 @@
 extern "C" {
 #endif
 
-// enum report_id
-// {
-// 	REPORT_ID_RESERVED,
-	
-// 	REPORT_ID_GAME_CONTROLLER,
-
-// 	REPORT_ID_COUNT
-// };
-
-// static const uint8_t input_reports[] = {
-// 	REPORT_ID_GAME_CONTROLLER,
-// };
-
 extern const uint8_t hid_report_desc[];
 extern const size_t hid_report_desc_size;
 

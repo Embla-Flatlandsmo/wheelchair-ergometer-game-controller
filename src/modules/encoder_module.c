@@ -6,6 +6,7 @@
 
 
 #include <zephyr/kernel.h>
+#include <float.h>
 
 #define MODULE encoder_module
 #include <caf/events/module_state_event.h>
@@ -27,6 +28,10 @@ static float encoder_b_rot_speed = 0.0;
 #define DT_MSEC CONFIG_ENCODER_DELTA_TIME_MSEC
 static const float alpha = ((float)CONFIG_ENCODER_MOVING_AVERAGE_ALPHA)/1000.0;
 static const float dt = (float)DT_MSEC/1000.0;
+
+static float simulated_encoder_value = 1000000.0;
+static int simulated_encoder_ticks = 0;
+
 
 static void send_data_evt(void)
 {
@@ -52,13 +57,25 @@ void data_evt_timeout_handler(struct k_timer *dummy)
 
 K_TIMER_DEFINE(data_evt_timeout, data_evt_timeout_handler, NULL);
 
-/**
- * @brief Processes data upon timeout of the periodic poller
- * 
- * @param work 
- */
 void data_evt_timeout_work_handler(struct k_work *work)
 {
+	if (IS_ENABLED(CONFIG_ENCODER_SIMULATE_INPUT))
+	{
+		float encoder_a_current_speed = simulated_encoder_value/dt;
+		encoder_a_rot_speed = moving_avg_filter(encoder_a_rot_speed, encoder_a_current_speed);
+
+		float encoder_b_current_speed = simulated_encoder_value/dt;
+		encoder_b_rot_speed = moving_avg_filter(encoder_b_rot_speed, encoder_b_current_speed);
+		send_data_evt();
+
+		simulated_encoder_ticks++;
+		if (simulated_encoder_ticks >= CONFIG_ENCODER_SIMULATE_INPUT_INTERVAL)
+		{
+			simulated_encoder_value *= -1.0;
+			simulated_encoder_ticks = 0;
+		}
+		return;
+	}
 	struct sensor_value rot_a, rot_b;
 	int err;
 	err = sensor_sample_fetch(encoder_a_dev);
@@ -100,27 +117,28 @@ void data_evt_timeout_work_handler(struct k_work *work)
 	send_data_evt();
 }
 
-
 static int module_init(void)
 {
-	encoder_a_dev = device_get_binding(DT_LABEL(DT_NODELABEL(qdeca)));
-	encoder_b_dev = device_get_binding(DT_LABEL(DT_NODELABEL(qdecb)));
-	if (encoder_a_dev == NULL || encoder_b_dev == NULL)
+	if (!IS_ENABLED(CONFIG_ENCODER_SIMULATE_INPUT))
 	{
-		LOG_ERR("Failed to get bindings for encoder devices");
-		return -ENODEV;
+		encoder_a_dev = device_get_binding(DT_LABEL(DT_NODELABEL(qdeca)));
+		encoder_b_dev = device_get_binding(DT_LABEL(DT_NODELABEL(qdecb)));
+		if (encoder_a_dev == NULL || encoder_b_dev == NULL)
+		{
+			LOG_ERR("Failed to get bindings for encoder devices");
+			return -ENODEV;
+		}
+	} else {
+		LOG_DBG("Using simulated encoder inputs");
 	}
+
 	k_timer_start(&data_evt_timeout, K_NO_WAIT, K_MSEC(DT_MSEC));
 	return 0;
 }
 
-/**
- * @brief Main event listener for the module. Receives and processes all events.
- */
 static bool app_event_handler(const struct app_event_header *aeh)
 {
 	if (is_module_state_event(aeh)) {
-		// Device startup event
 		const struct module_state_event *event = cast_module_state_event(aeh);
 
 		if (check_state(event, MODULE_ID(main), MODULE_STATE_READY)) {

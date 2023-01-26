@@ -35,67 +35,45 @@ const float min_speed_diff_m_per_sec = ((float)CONFIG_APP_MIN_SPEED_DIFF_MM_PER_
 
 #define BASE_USB_HID_SPEC_VERSION 0x0101
 
-/* Number of input reports in this application. */
-#define INPUT_REPORT_COUNT 1
-/* Length of Game Pad Input Report containing movement data. */
-#define INPUT_REP_MOVEMENT_NUM_BYTES 2
-/* Index of Game pad Input Report containing movement data. */
-#define INPUT_REP_MOVEMENT_INDEX 0
-/* Id of reference to Game pad Input Report containing movement data. */
-#define INPUT_REP_REF_MOVEMENT_ID 1
+#define INPUT_REP_REF_BUTTONS_ID 1
+#define INPUT_REP_REF_JOYSTICK_ID 2
+/* Length of Game Pad Input Report containing button data. */
+#define INPUT_REP_BUTTONS_NUM_BYTES 2
+/* Length of Game Pad Input Report containing joystick data. */
+#define INPUT_REP_JOYSTICK_NUM_BYTES 4
+/* Index of Game pad Input Report containing buttons data. */
+#define INPUT_REP_BUTTON_INDEX 0
+/* Index of Game pad Input Report containing joystick data. */
+#define INPUT_REP_JOYSTICK_INDEX 1
+
+
 
 /* HIDS instance. */
 BT_HIDS_DEF(hids_obj,
-            INPUT_REP_MOVEMENT_NUM_BYTES);
+            INPUT_REP_BUTTONS_NUM_BYTES,
+            INPUT_REP_JOYSTICK_NUM_BYTES
+            );
 
 static struct bt_conn *cur_conn;
 static bool secured;
 static bool protocol_boot;
 
-/**
- * @brief Converts rotational speed to meters per second. Note: This is just like
- * multiplying with a constant and so this function should be removed in a future
- * iteration of the software.
- * 
- * @param rot_speed_deg_per_second rotational speed in degrees per second 
- * @return float translational speed in meters per second
- */
 static float rot_speed_to_meters_per_second(float rot_speed_deg_per_second)
 {
     float rot_speed_rad_per_second = rot_speed_deg_per_second * M_PI / 180.0;
     return cylinder_diameter_m/2.0 * rot_speed_rad_per_second;
 }
 
-/**
- * @brief Calculate the average of the two input values
- * 
- * @param wheel_a_speed 
- * @param wheel_b_speed 
- * @return float Average of the two input values
- */
 static float wheel_speed_avg(float wheel_a_speed, float wheel_b_speed)
 {
     return (wheel_a_speed + wheel_b_speed) / 2.0;
 }
 
-/**
- * @brief Calculate the difference between the two input values
- * 
- * @param wheel_a_speed 
- * @param wheel_b_speed 
- * @return float difference between the two input values
- */
 static float wheel_speed_difference(float wheel_a_speed, float wheel_b_speed)
 {
     return wheel_a_speed - wheel_b_speed;
 }
 
-/**
- * @brief Enforce deadzone and clamp values that exceed the maximum value
- * 
- * @param speed_m_per_sec speed
- * @return float clamped/processed speed
- */
 static float speed_limits(float speed_m_per_sec)
 {
     if (IN_RANGE(speed_m_per_sec, -min_speed_m_per_sec, min_speed_m_per_sec)) {
@@ -104,16 +82,6 @@ static float speed_limits(float speed_m_per_sec)
     return CLAMP(speed_m_per_sec, -max_speed_m_per_sec, max_speed_m_per_sec);
 }
 
-/**
- * @brief Linearly maps a value in the range [a,b] to the range [c,d]
- * 
- * @param value Value to map
- * @param input_start Start of the input range
- * @param input_end End of the input range
- * @param output_start Start of the output range
- * @param output_end End of the output range
- * @return uint8_t Mapped input value
- */
 static uint8_t map_range(float value, float input_start, float input_end, uint8_t output_start, uint8_t output_end)
 {
     float input_decimal = (value-input_start)/(input_end-input_start);
@@ -136,24 +104,23 @@ static int module_init(void)
     hids_init_param.rep_map.size = hid_report_desc_size;
 
     /* Declare HID reports */
-    struct bt_hids_inp_rep *input_report =
+    struct bt_hids_inp_rep *hids_input_report =
         &hids_init_param.inp_rep_group_init.reports[0];
 
-    input_report->size = INPUT_REP_MOVEMENT_NUM_BYTES;
-	input_report->id = INPUT_REP_REF_MOVEMENT_ID;
-	input_report->rep_mask = NULL;
+    hids_input_report->size = INPUT_REP_BUTTONS_NUM_BYTES;
+	hids_input_report->id = INPUT_REP_REF_BUTTONS_ID;
+	hids_input_report->rep_mask = NULL;
 	hids_init_param.inp_rep_group_init.cnt++;
-	// hids_init_param.pm_evt_handler = hids_pm_evt_handler;
+
+    hids_input_report++;
+    hids_input_report->size = INPUT_REP_JOYSTICK_NUM_BYTES;
+	hids_input_report->id = INPUT_REP_REF_JOYSTICK_ID;
+	hids_input_report->rep_mask = NULL;
+	hids_init_param.inp_rep_group_init.cnt++;
+
     return bt_hids_init(&hids_obj, &hids_init_param);
 }
 
-/**
- * @brief Converts encoder event into difference and average speeds
- * 
- * @param event encoder event containing rotational speed data for the two encoders
- * @param[out] wheel_difference Filtered and mapped difference of the values in the event
- * @param[out] wheel_avg Filtered and mapped average of the values in the event
- */
 static void encoder_event_to_speed(const struct encoder_module_event *event, uint8_t* wheel_difference, uint8_t* wheel_avg)
 {
     if (event->type != ENCODER_EVT_DATA_READY)
@@ -175,63 +142,29 @@ static void encoder_event_to_speed(const struct encoder_module_event *event, uin
     LOG_DBG("Wheel_avg: %d, wheel_diff: %d", *wheel_avg, *wheel_difference);
 }
 
-/**
- * @brief Sends a HID report to the currently connected device
- * 
- * @param x_axis x-axis value of "joystick"
- * @param y_axis y-axis value of "joystick"
- */
 static void send_hid_report(uint8_t x_axis, uint8_t y_axis)
 {
-    // for (size_t i = 0; i < CONFIG_BT_HIDS_MAX_CLIENT_COUNT; i++) {
-    if (!cur_conn)
+    if (!cur_conn || !secured)
     {
         return;
     }
-    uint8_t buffer[2] = {x_axis, y_axis};
-
     int err;
-    err = bt_hids_inp_rep_send(&hids_obj, cur_conn,
-                    INPUT_REP_MOVEMENT_INDEX,
-                    buffer, sizeof(buffer), NULL);
 
+    uint8_t buffer[INPUT_REP_JOYSTICK_NUM_BYTES] = {y_axis, y_axis, y_axis, y_axis};
+
+
+    err = bt_hids_inp_rep_send(&hids_obj, cur_conn,
+                    INPUT_REP_JOYSTICK_INDEX,
+                    buffer, INPUT_REP_JOYSTICK_NUM_BYTES, NULL);
     if (err)
     {
-        if (err == -ENOTCONN)
-        {
-            LOG_WRN("Cannot send report: device disconnected");
-        }
-        else if (err == -EBADF)
-        {
-            LOG_WRN("Cannot send report: incompatible mode");
-        }
-        else
-        {
-            LOG_ERR("Cannot send report (%d)", err);
-        }
+        LOG_ERR("Cannot send left joystick report (%d)", err);
         return;
-        // hid_report_sent(cur_conn, report_id, true);
     }
-    LOG_DBG("HID report successfully sent. x-axis val: %d, y-axis val: %d", buffer[0], buffer[1]);
-    // }
+    
+    LOG_DBG("HID report successfully sent.");
 }
 
-// static void notify_secured_fn(struct k_work *work)
-// {
-//     secured = true;
-
-//     for (size_t r_id = 0; r_id < REPORT_ID_COUNT; r_id++)
-//     {
-//         bool enabled = report_enabled[r_id];
-//         broadcast_subscription_change(r_id, enabled);
-//     }
-// }
-
-/**
- * @brief Notifies the bt_hids subsystem of the connection state
- * 
- * @param event event containing information about peer connection
- */
 static void notify_hids(const struct ble_peer_event *event)
 {
     int err = 0;
@@ -261,30 +194,11 @@ static void notify_hids(const struct ble_peer_event *event)
             LOG_ERR("Connection context was not allocated");
         }
 
-        // cur_conn = NULL;
-        // secured = false;
-        // protocol_boot = false;
-        // if (CONFIG_DESKTOP_HIDS_FIRST_REPORT_DELAY > 0)
-        // {
-        //     /* Cancel cannot fail if executed from another work's context. */
-        //     (void)k_work_cancel_delayable(&notify_secured);
-        // }
         break;
 
     case PEER_STATE_SECURED:
         __ASSERT_NO_MSG(cur_conn == event->id);
         secured = true;
-
-        // if (CONFIG_DESKTOP_HIDS_FIRST_REPORT_DELAY > 0)
-        // {
-        //     k_work_reschedule(&notify_secured,
-        //                       K_MSEC(CONFIG_DESKTOP_HIDS_FIRST_REPORT_DELAY));
-        // }
-        // else
-        // {
-        //     notify_secured_fn(NULL);
-            
-        // }
 
         break;
 
@@ -299,14 +213,10 @@ static void notify_hids(const struct ble_peer_event *event)
     }
 }
 
-/**
- * @brief Main event listener for the module. Receives and processes all events.
- */
 static bool app_event_handler(const struct app_event_header *aeh)
 {
     if (is_encoder_module_event(aeh))
     {
-        // k_timer_start(&encoder_timeout, K_MSEC(CONFIG_HID_TIMEOUT_DURATION_MSEC), K_NO_WAIT);
         uint8_t speed_diff = 0;
         uint8_t speed_avg = 0;
         encoder_event_to_speed(cast_encoder_module_event(aeh), &speed_diff, &speed_avg);
@@ -332,12 +242,6 @@ static bool app_event_handler(const struct app_event_header *aeh)
 
             __ASSERT_NO_MSG(!initialized);
             initialized = true;
-
-            // if (CONFIG_DESKTOP_HIDS_FIRST_REPORT_DELAY > 0)
-            // {
-            //     k_work_init_delayable(&notify_secured,
-            //                           notify_secured_fn);
-            // }
 
             if (module_init())
             {
