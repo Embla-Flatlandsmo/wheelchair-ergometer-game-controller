@@ -59,6 +59,8 @@ adafruit-nrfutil dfu serial --package dfu-package.zip --port COMxx -b 115200
 
 - Navigate to folder containing firmware for the microcontroller you want to work with (```./balancing_robot_firmware/<MCU NAME>```) and use west commands for building and flashing the firmware as described in the [developer guide](https://developer.nordicsemi.com/nRF_Connect_SDK/doc/1.9.0/zephyr/guides/west/build-flash-debug.html#west-build-flash-debug). 
 -->
+## Controller Configuration types
+In this project you must choose either `CONFIG_HID_MODULE_CONTROLLER_OUTPUT_A=y`or `CONFIG_HID_MODULE_CONTROLLER_OUTPUT_B=y`. 
 
 ## Connecting to the device
 On startup, the device will perform Bluetooth advertisement.

@@ -10,9 +10,40 @@ menuconfig HID_MODULE
 
 if HID_MODULE
 
-config HID_THREAD_STACK_SIZE
+config HID_MODULE_THREAD_STACK_SIZE
 	int "HID module thread stack size"
 	default 1280
+
+choice 
+	prompt "HID Controller Output configuration"
+
+config HID_MODULE_CONTROLLER_OUTPUT_A
+	bool "Avg speed on left joystick y-axis, speed difference on left joystick x-axis"
+
+config HID_MODULE_CONTROLLER_OUTPUT_B
+	bool "Avg speed on left joystick y-axis, speed difference on right joystick x-axis"
+
+endchoice
+
+config HID_MODULE_MIN_OUTPUT_SPEED_MM_PER_SEC
+	int "Translational speed that maps to no output in HID report"
+	default 20
+    help 
+        "Uses millimeter per second to get a finer resolution"
+
+config HID_MODULE_MAX_OUTPUT_SPEED_MM_PER_SEC
+	int "Translational speed that maps to max output in HID report"
+	default 500
+    help
+        "Uses millimeter per second to get a finer resolution"
+
+config HID_MODULE_MIN_OUTPUT_SPEED_DIFF_MM_PER_SEC
+    int "Minimum speed difference between wheels which maps to no output in HID report"
+    default 5
+
+config HID_MODULE_MAX_OUTPUT_SPEED_DIFF_MM_PER_SEC
+    int "Maximum speed difference between wheels which maps to max output in HID report"
+    default 500
 
 
 endif # HID_MODULE

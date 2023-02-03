@@ -17,16 +17,19 @@ config ENCODER_DELTA_TIME_MSEC
 
 config ENCODER_MOVING_AVERAGE_ALPHA
 	int "Alpha for moving average filter. Min 0, max 1000"
-	default 800
+	default 200
 
 config ENCODER_SIMULATE_INPUT
 	bool "Simulates inputs in the case of no encoders available"
+
+if ENCODER_SIMULATE_INPUT
 
 config ENCODER_SIMULATE_INPUT_INTERVAL
 	int "Number of time intervals between min and max input values"
 	default 10
 	help
 	  "To find the time in msec, multiply this value by ENCODER_DELTA_TIME_MSEC"
+endif # ENCODER_SIMULATE_INPUT
 
 endif # ENCODER_MODULE
 

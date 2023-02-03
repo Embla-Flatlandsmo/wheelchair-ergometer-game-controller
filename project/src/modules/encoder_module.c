@@ -29,9 +29,14 @@ static float encoder_b_rot_speed = 0.0;
 static const float alpha = ((float)CONFIG_ENCODER_MOVING_AVERAGE_ALPHA)/1000.0;
 static const float dt = (float)DT_MSEC/1000.0;
 
+#if CONFIG_ENCODER_SIMULATE_INPUT
+#define MAX_SIMULATED_ENCODER_TICKS CONFIG_ENCODER_SIMULATE_INPUT_INTERVAL
+#else
+#define  MAX_SIMULATED_ENCODER_TICKS 0
+#endif
+
 static float simulated_encoder_value = 1000000.0;
 static int simulated_encoder_ticks = 0;
-
 
 static void send_data_evt(void)
 {
@@ -69,26 +74,21 @@ void data_evt_timeout_work_handler(struct k_work *work)
 		send_data_evt();
 
 		simulated_encoder_ticks++;
-		if (simulated_encoder_ticks >= CONFIG_ENCODER_SIMULATE_INPUT_INTERVAL)
+		if (simulated_encoder_ticks >= MAX_SIMULATED_ENCODER_TICKS)
 		{
 			simulated_encoder_value *= -1.0;
 			simulated_encoder_ticks = 0;
 		}
 		return;
 	}
+
+
 	struct sensor_value rot_a, rot_b;
 	int err;
 	err = sensor_sample_fetch(encoder_a_dev);
 	if (err != 0)
 	{
 		LOG_ERR("Encoder A sensor_sample_fetch error: %d\n", err);
-		return;
-	}
-
-	err = sensor_sample_fetch(encoder_b_dev);
-	if (err != 0)
-	{
-		LOG_ERR("Encoder B sensor_sample_fetch error: %d\n", err);
 		return;
 	}
 
@@ -99,9 +99,19 @@ void data_evt_timeout_work_handler(struct k_work *work)
 		return;
 	}
 
-	float encoder_a_rot_delta = sensor_value_to_double(&rot_a);
+	// double hp_encoder_delta = sensor_value_to_double(&rot_a) 
+	float encoder_a_rot_delta = (float)sensor_value_to_double(&rot_a);
+	LOG_DBG("encoder_a_delta: %f", encoder_a_rot_delta);
 	float encoder_a_current_speed = encoder_a_rot_delta/dt;
 	encoder_a_rot_speed = moving_avg_filter(encoder_a_rot_speed, encoder_a_current_speed);
+	LOG_DBG("Encoder A rot speed: %f", encoder_a_rot_speed);
+
+	err = sensor_sample_fetch(encoder_b_dev);
+	if (err != 0)
+	{
+		LOG_ERR("Encoder B sensor_sample_fetch error: %d\n", err);
+		return;
+	}
 
 	err = sensor_channel_get(encoder_b_dev, SENSOR_CHAN_ROTATION, &rot_b);
 	if (err != 0)
@@ -110,7 +120,7 @@ void data_evt_timeout_work_handler(struct k_work *work)
 		return;
 	}
 
-	float encoder_b_rot_delta = sensor_value_to_double(&rot_b);
+	float encoder_b_rot_delta = (float)sensor_value_to_double(&rot_b);
 	float encoder_b_current_speed = encoder_b_rot_delta/dt;
 	encoder_b_rot_speed = moving_avg_filter(encoder_b_rot_speed, encoder_b_current_speed);
 	LOG_DBG("Encoder B rot speed: %f", encoder_b_rot_speed);

@@ -26,11 +26,15 @@ LOG_MODULE_REGISTER(MODULE, CONFIG_HID_MODULE_LOG_LEVEL);
 
 #define M_PI   3.14159265358979323846264338327950288
 
-const float max_speed_m_per_sec = ((float)CONFIG_APP_MAX_SPEED_MM_PER_SEC)/1000.0f;
-const float min_speed_m_per_sec = ((float)CONFIG_APP_MIN_SPEED_MM_PER_SEC)/1000.0f;
-const float cylinder_diameter_m = ((float)CONFIG_APP_CYLINDER_DIAMETER_MM)/1000.0f;
-const float max_speed_diff_m_per_sec = ((float)CONFIG_APP_MAX_SPEED_DIFF_MM_PER_SEC)/1000.0f;
-const float min_speed_diff_m_per_sec = ((float)CONFIG_APP_MIN_SPEED_DIFF_MM_PER_SEC)/1000.0f;
+/* Wheelchair configuration values */
+const float max_wheel_speed_m_per_sec = ((float)CONFIG_APP_WHEEL_SPEED_LIMIT_MM_PER_SEC) / 1000.0f;
+const float cylinder_diameter_m = ((float)CONFIG_APP_CYLINDER_DIAMETER_MM) / 1000.0f;
+
+/* Values needed for conversion from float->uint8 */
+const float max_avg_speed_m_per_sec = ((float)CONFIG_HID_MODULE_MAX_OUTPUT_SPEED_MM_PER_SEC) / 1000.0f;
+const float min_avg_speed_m_per_sec = ((float)CONFIG_HID_MODULE_MIN_OUTPUT_SPEED_MM_PER_SEC)/1000.0f;
+const float max_speed_diff_m_per_sec = ((float)CONFIG_HID_MODULE_MAX_OUTPUT_SPEED_DIFF_MM_PER_SEC)/1000.0f;
+const float min_speed_diff_m_per_sec = ((float)CONFIG_HID_MODULE_MIN_OUTPUT_SPEED_DIFF_MM_PER_SEC)/1000.0f;
 
 
 #define BASE_USB_HID_SPEC_VERSION 0x0101
@@ -81,20 +85,22 @@ static float rot_speed_to_meters_per_second(float rot_speed_deg_per_second)
 
 static float wheel_speed_avg(float wheel_a_speed, float wheel_b_speed)
 {
-    return (wheel_a_speed + wheel_b_speed) / 2.0;
+    float avg_speed = (wheel_a_speed + wheel_b_speed) / 2.0;
+    if (IN_RANGE(avg_speed, -min_avg_speed_m_per_sec, min_avg_speed_m_per_sec))
+    {
+        return 0.0;
+    }
+    return CLAMP(avg_speed, -max_avg_speed_m_per_sec, max_avg_speed_m_per_sec);
 }
 
 static float wheel_speed_difference(float wheel_a_speed, float wheel_b_speed)
 {
-    return wheel_a_speed - wheel_b_speed;
-}
-
-static float speed_limits(float speed_m_per_sec)
-{
-    if (IN_RANGE(speed_m_per_sec, -min_speed_m_per_sec, min_speed_m_per_sec)) {
+    float speed_diff =  wheel_a_speed - wheel_b_speed;
+    if (IN_RANGE(speed_diff, -min_speed_diff_m_per_sec, min_speed_diff_m_per_sec))
+    {
         return 0.0;
     }
-    return CLAMP(speed_m_per_sec, -max_speed_m_per_sec, max_speed_m_per_sec);
+    return CLAMP(speed_diff, -max_speed_diff_m_per_sec, max_speed_diff_m_per_sec);
 }
 
 static uint8_t map_range(float value, float input_start, float input_end, uint8_t output_start, uint8_t output_end)
@@ -106,6 +112,10 @@ static uint8_t map_range(float value, float input_start, float input_end, uint8_
 
 static int module_init(void)
 {
+    LOG_INF("Max speed: %f m/s", max_avg_speed_m_per_sec);
+    LOG_INF("Min speed: %f m/s", min_avg_speed_m_per_sec);
+    LOG_INF("Max speed diff: %f m/s", max_speed_diff_m_per_sec);
+    LOG_INF("Min speed diff: %f m/s", min_speed_diff_m_per_sec);
     /* HID service configuration */
     struct bt_hids_init_param hids_init_param = {0};
 
@@ -122,16 +132,26 @@ static int module_init(void)
     struct bt_hids_inp_rep *hids_input_report =
         &hids_init_param.inp_rep_group_init.reports[0];
 
+
+    const uint8_t buttons_rep_mask[] = {0b11000000};
     hids_input_report->size = INPUT_REP_BUTTONS_NUM_BYTES;
 	hids_input_report->id = INPUT_REP_REF_BUTTONS_ID;
 	hids_input_report->rep_mask = NULL;
 	hids_init_param.inp_rep_group_init.cnt++;
 
+
+    const uint8_t joystick_rep_mask[] = {0b00111100};
     hids_input_report++;
     hids_input_report->size = INPUT_REP_JOYSTICK_NUM_BYTES;
 	hids_input_report->id = INPUT_REP_REF_JOYSTICK_ID;
 	hids_input_report->rep_mask = NULL;
 	hids_init_param.inp_rep_group_init.cnt++;
+
+    // hids_input_report++;
+    // hids_input_report->size = INPUT_REP_RIGHT_JOYSTICK_NUM_BYTES;
+	// hids_input_report->id = INPUT_REP_REF_RIGHT_JOYSTICK_ID;
+	// hids_input_report->rep_mask = NULL;
+	// hids_init_param.inp_rep_group_init.cnt++;
 	// hids_init_param.pm_evt_handler = hids_pm_evt_handler;
     return bt_hids_init(&hids_obj, &hids_init_param);
 }
@@ -146,14 +166,14 @@ static void encoder_event_to_speed(const struct encoder_module_event *event, uin
     float wheel_a_speed = rot_speed_to_meters_per_second(event->rot_speed_a);
     float wheel_b_speed = rot_speed_to_meters_per_second(event->rot_speed_b);
 
-    wheel_a_speed = speed_limits(wheel_a_speed);
-    wheel_b_speed = speed_limits(wheel_b_speed);
+    wheel_a_speed = CLAMP(wheel_a_speed, -max_wheel_speed_m_per_sec, max_wheel_speed_m_per_sec);
+    wheel_b_speed = CLAMP(wheel_b_speed, -max_wheel_speed_m_per_sec, max_wheel_speed_m_per_sec);
 
     float speed_diff = wheel_speed_difference(wheel_a_speed, wheel_b_speed);
     float speed_avg = wheel_speed_avg(wheel_a_speed, wheel_b_speed);
 
     (*wheel_difference) = map_range(speed_diff, -max_speed_diff_m_per_sec, max_speed_diff_m_per_sec, 0, 255);
-    (*wheel_avg) = map_range(speed_avg, -max_speed_m_per_sec, max_speed_m_per_sec, 0, 255);
+    (*wheel_avg) = map_range(speed_avg, -max_avg_speed_m_per_sec, max_avg_speed_m_per_sec, 0, 255);
     LOG_DBG("Wheel_avg: %d, wheel_diff: %d", *wheel_avg, *wheel_difference);
 }
 
@@ -165,15 +185,24 @@ static void send_hid_report(uint8_t x_axis, uint8_t y_axis)
     }
     int err;
 
-    uint8_t buffer[4] = {y_axis, y_axis, y_axis, y_axis};
+    uint8_t send_buffer[INPUT_REP_JOYSTICK_NUM_BYTES];
 
+    if (IS_ENABLED(CONFIG_HID_MODULE_CONTROLLER_OUTPUT_A))
+    {
+        const uint8_t output[INPUT_REP_JOYSTICK_NUM_BYTES] = {x_axis, y_axis, 0, 0};
+        memcpy(send_buffer, output, sizeof(output));
+    }
+    else {
+        const uint8_t output[INPUT_REP_JOYSTICK_NUM_BYTES] = {0, y_axis, x_axis, 0};
+        memcpy(send_buffer, output, sizeof(output));
+    }
 
     err = bt_hids_inp_rep_send(&hids_obj, cur_conn,
                     INPUT_REP_JOYSTICK_INDEX,
-                    buffer, sizeof(buffer), NULL);
+                    send_buffer, INPUT_REP_JOYSTICK_NUM_BYTES, NULL);
     if (err)
     {
-        LOG_ERR("Cannot send joystick report (%d)", err);
+        LOG_ERR("Cannot send left joystick report (%d)", err);
         return;
     }
 
@@ -189,7 +218,7 @@ static void send_hid_report(uint8_t x_axis, uint8_t y_axis)
     //     return;
     // }
     
-    LOG_DBG("HID report successfully sent.");
+    LOG_DBG("HID report successfully sent. x_axis: %d, y_axis: %d", x_axis, y_axis);
     // }
 }
 
