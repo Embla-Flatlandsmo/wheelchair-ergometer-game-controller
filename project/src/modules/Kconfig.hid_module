@@ -43,7 +43,7 @@ config HID_MODULE_MIN_OUTPUT_SPEED_DIFF_MM_PER_SEC
 
 config HID_MODULE_MAX_OUTPUT_SPEED_DIFF_MM_PER_SEC
     int "Maximum speed difference between wheels which maps to max output in HID report"
-    default 500
+    default 1000
 
 
 endif # HID_MODULE

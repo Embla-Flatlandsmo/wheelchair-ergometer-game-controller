@@ -27,7 +27,7 @@ LOG_MODULE_REGISTER(MODULE, CONFIG_HID_MODULE_LOG_LEVEL);
 #define M_PI   3.14159265358979323846264338327950288
 
 /* Wheelchair configuration values */
-const float max_wheel_speed_m_per_sec = ((float)CONFIG_APP_WHEEL_SPEED_LIMIT_MM_PER_SEC) / 1000.0f;
+const float max_wheel_speed_m_per_sec = ((float)CONFIG_HID_MODULE_MAX_OUTPUT_SPEED_MM_PER_SEC) / 1000.0f;
 const float cylinder_diameter_m = ((float)CONFIG_APP_CYLINDER_DIAMETER_MM) / 1000.0f;
 
 /* Values needed for conversion from float->uint8 */
