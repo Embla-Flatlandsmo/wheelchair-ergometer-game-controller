@@ -27,23 +27,23 @@ endchoice
 
 config HID_MODULE_MIN_OUTPUT_SPEED_MM_PER_SEC
 	int "Translational speed that maps to no output in HID report"
-	default 20
+	default 10
     help 
         "Uses millimeter per second to get a finer resolution"
 
 config HID_MODULE_MAX_OUTPUT_SPEED_MM_PER_SEC
-	int "Translational speed that maps to max output in HID report"
-	default 500
+	int "Translational speed that maps to saturation and max output in HID report"
+	default 3500
     help
         "Uses millimeter per second to get a finer resolution"
 
-config HID_MODULE_MIN_OUTPUT_SPEED_DIFF_MM_PER_SEC
-    int "Minimum speed difference between wheels which maps to no output in HID report"
+config HID_MODULE_MIN_OUTPUT_TURN_RATE_DEG_PER_SEC
+    int "Minimum speed difference between wheels which leads to no output in HID report"
     default 5
 
-config HID_MODULE_MAX_OUTPUT_SPEED_DIFF_MM_PER_SEC
-    int "Maximum speed difference between wheels which maps to max output in HID report"
-    default 1000
+config HID_MODULE_MAX_OUTPUT_TURN_RATE_DEG_PER_SEC
+    int "The turning rate which leads to saturation and max output in HID report"
+    default 400
 
 
 endif # HID_MODULE

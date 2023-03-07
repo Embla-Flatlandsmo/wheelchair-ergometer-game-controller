@@ -9,8 +9,7 @@ config APP_CYLINDER_DIAMETER_MM
     int "Diameter of cylinder to which encoder is attached"
     default 79
 
-config APP_WHEEL_SPEED_LIMIT_MM_PER_SEC
-    int "Maximum speed of an individual wheelchair wheel"
-    default 500
-
+config APP_INTER_WHEEL_DISTANCE_MM
+    int "Distance between the wheels of the wheelchair"
+    default 620
 endmenu

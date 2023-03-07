@@ -19,11 +19,18 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(MODULE, CONFIG_ENCODER_MODULE_LOG_LEVEL);
 
+/**This code uses a left-handed coordinate system. To find the positive
+ * spinning direction, point your left hand 
+ * This means that when going forwards, the encoder values will read a positive
+ * rotational speed but the wheels will have a (technically) negative rotational speed. 
+ */
+
 struct device* encoder_a_dev;
 struct device* encoder_b_dev;
 
 static float encoder_a_rot_speed = 0.0;
 static float encoder_b_rot_speed = 0.0;
+static float cumulative_encoder_b = 0.0;
 
 #define DT_MSEC CONFIG_ENCODER_DELTA_TIME_MSEC
 static const float alpha = ((float)CONFIG_ENCODER_MOVING_AVERAGE_ALPHA)/1000.0;
@@ -121,6 +128,9 @@ void data_evt_timeout_work_handler(struct k_work *work)
 	}
 
 	float encoder_b_rot_delta = (float)sensor_value_to_double(&rot_b);
+	// LOG_DBG("encoder_b_delta: %f", encoder_b_rot_delta);
+	// cumulative_encoder_b += encoder_b_rot_delta;
+	// LOG_DBG("Cumulative encoder B: %f [deg]", cumulative_encoder_b);
 	float encoder_b_current_speed = encoder_b_rot_delta/dt;
 	encoder_b_rot_speed = moving_avg_filter(encoder_b_rot_speed, encoder_b_current_speed);
 	LOG_DBG("Encoder B rot speed: %f", encoder_b_rot_speed);

@@ -27,15 +27,26 @@ LOG_MODULE_REGISTER(MODULE, CONFIG_HID_MODULE_LOG_LEVEL);
 #define M_PI   3.14159265358979323846264338327950288
 
 /* Wheelchair configuration values */
+
 const float max_wheel_speed_m_per_sec = ((float)CONFIG_HID_MODULE_MAX_OUTPUT_SPEED_MM_PER_SEC) / 1000.0f;
-const float cylinder_diameter_m = ((float)CONFIG_APP_CYLINDER_DIAMETER_MM) / 1000.0f;
+/**
+ * @brief The radius [m] of one of the cylinders of the ergometer
+ */
+const float r_c = ((float)CONFIG_APP_CYLINDER_DIAMETER_MM) / (2.0*1000.0);
+
+/**
+ * @brief Half of the distance [m] between the wheelchair wheels.
+*/
+const float r_p = ((float)CONFIG_APP_INTER_WHEEL_DISTANCE_MM) / (2.0*1000.0);
 
 /* Values needed for conversion from float->uint8 */
-const float max_avg_speed_m_per_sec = ((float)CONFIG_HID_MODULE_MAX_OUTPUT_SPEED_MM_PER_SEC) / 1000.0f;
-const float min_avg_speed_m_per_sec = ((float)CONFIG_HID_MODULE_MIN_OUTPUT_SPEED_MM_PER_SEC)/1000.0f;
-const float max_speed_diff_m_per_sec = ((float)CONFIG_HID_MODULE_MAX_OUTPUT_SPEED_DIFF_MM_PER_SEC)/1000.0f;
-const float min_speed_diff_m_per_sec = ((float)CONFIG_HID_MODULE_MIN_OUTPUT_SPEED_DIFF_MM_PER_SEC)/1000.0f;
+const float max_translational_speed_m_per_sec = ((float)CONFIG_HID_MODULE_MAX_OUTPUT_SPEED_MM_PER_SEC) / 1000.0f;
+const float min_translational_speed_m_per_sec = ((float)CONFIG_HID_MODULE_MIN_OUTPUT_SPEED_MM_PER_SEC) / 1000.0f;
+const float max_turn_rate_deg_per_sec = ((float)CONFIG_HID_MODULE_MAX_OUTPUT_TURN_RATE_DEG_PER_SEC);
+const float min_turn_rate_deg_per_sec = ((float)CONFIG_HID_MODULE_MIN_OUTPUT_TURN_RATE_DEG_PER_SEC);
 
+const float difference_sensitivity_start = 0.4;
+const float difference_sensitivity_end = 0.7;
 
 #define BASE_USB_HID_SPEC_VERSION 0x0101
 
@@ -64,7 +75,7 @@ const float min_speed_diff_m_per_sec = ((float)CONFIG_HID_MODULE_MIN_OUTPUT_SPEE
 // #define INPUT_REP_JOYSTICK_NUM_BYTES 4
 // /* Index of Game pad Input Report containing joystick data. */
 // #define INPUT_REP_JOYSTICK_INDEX 0
-
+const uint8_t joystick_neutral = 128;
 
 
 /* HIDS instance. */
@@ -77,106 +88,118 @@ static struct bt_conn *cur_conn;
 static bool secured;
 static bool protocol_boot;
 
-static float rot_speed_to_meters_per_second(float rot_speed_deg_per_second)
-{
-    float rot_speed_rad_per_second = rot_speed_deg_per_second * M_PI / 180.0;
-    return cylinder_diameter_m/2.0 * rot_speed_rad_per_second;
-}
 
-static float wheel_speed_avg(float wheel_a_speed, float wheel_b_speed)
+/**========================================================================
+ *                     Encoder values to HID report
+ *========================================================================**/
+
+static float clamp_f(float val, float min, float max)
 {
-    float avg_speed = (wheel_a_speed + wheel_b_speed) / 2.0;
-    if (IN_RANGE(avg_speed, -min_avg_speed_m_per_sec, min_avg_speed_m_per_sec))
+    if (min > max)
     {
-        return 0.0;
+        return CLAMP(val, max, min);
     }
-    return CLAMP(avg_speed, -max_avg_speed_m_per_sec, max_avg_speed_m_per_sec);
+    return CLAMP(val, min, max);
 }
 
-static float wheel_speed_difference(float wheel_a_speed, float wheel_b_speed)
+static float degree_to_radian(float degrees)
 {
-    float speed_diff =  wheel_a_speed - wheel_b_speed;
-    if (IN_RANGE(speed_diff, -min_speed_diff_m_per_sec, min_speed_diff_m_per_sec))
-    {
-        return 0.0;
-    }
-    return CLAMP(speed_diff, -max_speed_diff_m_per_sec, max_speed_diff_m_per_sec);
+    return degrees*M_PI/180.0;
 }
 
+static float radian_to_degree(float radians)
+{
+    return radians*180.0/M_PI;
+}
+
+static float rot_speeds_to_turn_rate(float enc_a_rad_per_sec, float enc_b_rad_per_sec)
+{
+    return r_c*(enc_b_rad_per_sec-enc_a_rad_per_sec)/r_p;
+}
+
+static float rot_speeds_to_translational_speed(float enc_a_rad_per_sec, float enc_b_rad_per_sec)
+{
+    return r_c*(enc_a_rad_per_sec+enc_b_rad_per_sec);
+}
+
+static float map_range_f(float value, float input_start, float input_end, float output_start, float output_end)
+{
+    // float clamped_input = 0.0f;
+    // if (input_start > input_end) {
+    //     clamped_input = CLAMP(value, input_end, input_start);
+    // } else {
+    //     clamped_input = CLAMP(value, input_start, input_end);
+    // }
+    float clamped_input = clamp_f(value, input_start, input_end);
+    float input_decimal = (clamped_input - input_start) / (input_end - input_start);
+    float output_without_start_offset = input_decimal * (output_end - output_start);
+    return output_start+output_without_start_offset;
+    // return clamp_f(output_start+output_without_start_offset, output_start, output_end);
+    // if (output_start > output_end)
+    // {
+    //     return CLAMP(output_start + output_without_start_offset, output_end, output_start);
+    // }
+    // return CLAMP(output_start + output_without_start_offset, output_start, output_end);
+    // return CLAMP(output_start + output_without_start_offset, output_start, output_end);
+}
 static uint8_t map_range(float value, float input_start, float input_end, uint8_t output_start, uint8_t output_end)
 {
-    float input_decimal = (value-input_start)/(input_end-input_start);
-    uint8_t output_without_start_offset = (uint8_t)(input_decimal*(float)(output_end-output_start)+0.5);
-    return CLAMP(output_start + output_without_start_offset, output_start, output_end);
+    float clamped_input = clamp_f(value, input_start, input_end);
+    float input_decimal = (clamped_input - input_start) / (input_end - input_start);
+    uint8_t output_without_start_offset = (uint8_t)(input_decimal * (float)(output_end - output_start) + 0.5);
+    return output_start + output_without_start_offset;
+    // if (output_start > output_end)
+    // {
+    //     return CLAMP(output_start + output_without_start_offset, output_end, output_start);
+    // }
+    // return CLAMP(output_start + output_without_start_offset, output_start, output_end);
 }
 
-static int module_init(void)
+static uint8_t rot_speeds_to_hid_move_value(float enc_a_rad_per_sec, float enc_b_rad_per_sec)
 {
-    LOG_INF("Max speed: %f m/s", max_avg_speed_m_per_sec);
-    LOG_INF("Min speed: %f m/s", min_avg_speed_m_per_sec);
-    LOG_INF("Max speed diff: %f m/s", max_speed_diff_m_per_sec);
-    LOG_INF("Min speed diff: %f m/s", min_speed_diff_m_per_sec);
-    /* HID service configuration */
-    struct bt_hids_init_param hids_init_param = {0};
+    float translational_speed = rot_speeds_to_translational_speed(enc_a_rad_per_sec, enc_b_rad_per_sec);
 
-    hids_init_param.info.bcd_hid = BASE_USB_HID_SPEC_VERSION;
-    hids_init_param.info.b_country_code = 0x00;
-    hids_init_param.info.flags = BT_HIDS_REMOTE_WAKE |
-                                 BT_HIDS_NORMALLY_CONNECTABLE;
-
-    /* Attach report map */
-    hids_init_param.rep_map.data = hid_report_desc;
-    hids_init_param.rep_map.size = hid_report_desc_size;
-
-    /* Declare HID reports */
-    struct bt_hids_inp_rep *hids_input_report =
-        &hids_init_param.inp_rep_group_init.reports[0];
-
-
-    const uint8_t buttons_rep_mask[] = {0b11000000};
-    hids_input_report->size = INPUT_REP_BUTTONS_NUM_BYTES;
-	hids_input_report->id = INPUT_REP_REF_BUTTONS_ID;
-	hids_input_report->rep_mask = NULL;
-	hids_init_param.inp_rep_group_init.cnt++;
-
-
-    const uint8_t joystick_rep_mask[] = {0b00111100};
-    hids_input_report++;
-    hids_input_report->size = INPUT_REP_JOYSTICK_NUM_BYTES;
-	hids_input_report->id = INPUT_REP_REF_JOYSTICK_ID;
-	hids_input_report->rep_mask = NULL;
-	hids_init_param.inp_rep_group_init.cnt++;
-
-    // hids_input_report++;
-    // hids_input_report->size = INPUT_REP_RIGHT_JOYSTICK_NUM_BYTES;
-	// hids_input_report->id = INPUT_REP_REF_RIGHT_JOYSTICK_ID;
-	// hids_input_report->rep_mask = NULL;
-	// hids_init_param.inp_rep_group_init.cnt++;
-	// hids_init_param.pm_evt_handler = hids_pm_evt_handler;
-    return bt_hids_init(&hids_obj, &hids_init_param);
-}
-
-static void encoder_event_to_speed(const struct encoder_module_event *event, uint8_t* wheel_difference, uint8_t* wheel_avg)
-{
-    if (event->type != ENCODER_EVT_DATA_READY)
+    LOG_DBG("Unclamped translational speed: %f [m/s]", translational_speed);
+    LOG_DBG("Clamped translational speed: %f [m/s]", CLAMP(translational_speed, -max_translational_speed_m_per_sec, max_translational_speed_m_per_sec));
+    if (IN_RANGE(translational_speed, -min_translational_speed_m_per_sec, min_translational_speed_m_per_sec))
     {
-        return;
+        translational_speed = 0.0;
     }
-    
-    float wheel_a_speed = rot_speed_to_meters_per_second(event->rot_speed_a);
-    float wheel_b_speed = rot_speed_to_meters_per_second(event->rot_speed_b);
-
-    wheel_a_speed = CLAMP(wheel_a_speed, -max_wheel_speed_m_per_sec, max_wheel_speed_m_per_sec);
-    wheel_b_speed = CLAMP(wheel_b_speed, -max_wheel_speed_m_per_sec, max_wheel_speed_m_per_sec);
-
-    float speed_diff = wheel_speed_difference(wheel_a_speed, wheel_b_speed);
-    float speed_avg = wheel_speed_avg(wheel_a_speed, wheel_b_speed);
-
-    (*wheel_difference) = map_range(speed_diff, -max_speed_diff_m_per_sec, max_speed_diff_m_per_sec, 0, 255);
-    (*wheel_avg) = map_range(speed_avg, -max_avg_speed_m_per_sec, max_avg_speed_m_per_sec, 0, 255);
-    LOG_DBG("Wheel_avg: %d, wheel_diff: %d", *wheel_avg, *wheel_difference);
+    translational_speed *= -1; // y-axis seems to be inverted on game controllers, i.e. 0=positive, max and 255=negative
+    // float speed_sign = translational_speed < 0.0 ? -1.0 : 1.0;
+    // bool is_negative = turn_rate < 0.0;
+    // uint8_t deadzoned_value = map_range(translational_speed * speed_sign, min_translational_speed_m_per_sec, max_translational_speed_m_per_sec, 0, 127);
+    // uint8_t output_value = 128 + speed_sign * deadzoned_value;
+    // return output_value;
+    return map_range(translational_speed, -max_translational_speed_m_per_sec, max_translational_speed_m_per_sec, 0, 255);
 }
 
+static uint8_t rot_speeds_to_hid_turn_value(float enc_a_rad_per_sec, float enc_b_rad_per_sec)
+{
+    float turn_rate = rot_speeds_to_turn_rate(enc_a_rad_per_sec, enc_b_rad_per_sec);
+    turn_rate = radian_to_degree(turn_rate);
+    LOG_DBG("Unclamped turn rate: %f [deg/s]", turn_rate);
+    LOG_DBG("Clamped turn rate: %f [deg/s]", CLAMP(turn_rate, -max_turn_rate_deg_per_sec, max_turn_rate_deg_per_sec));
+    // if (IN_RANGE(turn_rate, -min_turn_rate_deg_per_sec, min_turn_rate_deg_per_sec))
+    // {
+    //     turn_rate = 0.0;
+    // }
+    float speed = rot_speeds_to_translational_speed(enc_a_rad_per_sec, enc_b_rad_per_sec);
+    speed = speed > 0.0 ? speed : -speed;
+    float difference_sensitivity = map_range_f(speed, max_translational_speed_m_per_sec * difference_sensitivity_start, max_translational_speed_m_per_sec * difference_sensitivity_end, 1.0, 0.0);
+    turn_rate = turn_rate*difference_sensitivity;
+    LOG_DBG("Difference sensitivity: %f",difference_sensitivity);    
+    LOG_DBG("Sensitivity-adjusted turn rate: %f [deg/s]", turn_rate);
+    // float turn_rate_sign = turn_rate < 0.0 ? -1.0 : 1.0;
+    // uint8_t deadzoned_value = map_range(turn_rate*turn_rate_sign, min_turn_rate_deg_per_sec, max_turn_rate_deg_per_sec, 0, 127);
+    // uint8_t output_value = 128+turn_rate_sign*deadzoned_value;
+    // return output_value;
+    return map_range(turn_rate, -max_turn_rate_deg_per_sec, max_turn_rate_deg_per_sec, 0, 255);
+}
+
+/**============================================
+ *         HID and connectivity-specific
+ *=============================================**/
 static void send_hid_report(uint8_t x_axis, uint8_t y_axis)
 {
     if (!cur_conn || !secured)
@@ -189,11 +212,11 @@ static void send_hid_report(uint8_t x_axis, uint8_t y_axis)
 
     if (IS_ENABLED(CONFIG_HID_MODULE_CONTROLLER_OUTPUT_A))
     {
-        const uint8_t output[INPUT_REP_JOYSTICK_NUM_BYTES] = {x_axis, y_axis, 0, 0};
+        const uint8_t output[INPUT_REP_JOYSTICK_NUM_BYTES] = {x_axis, y_axis, joystick_neutral, joystick_neutral};
         memcpy(send_buffer, output, sizeof(output));
     }
     else {
-        const uint8_t output[INPUT_REP_JOYSTICK_NUM_BYTES] = {0, y_axis, x_axis, 0};
+        const uint8_t output[INPUT_REP_JOYSTICK_NUM_BYTES] = {joystick_neutral, y_axis, x_axis, joystick_neutral};
         memcpy(send_buffer, output, sizeof(output));
     }
 
@@ -217,8 +240,9 @@ static void send_hid_report(uint8_t x_axis, uint8_t y_axis)
     //     LOG_ERR("Cannot send buttons report (%d)", err);
     //     return;
     // }
-    
-    LOG_DBG("HID report successfully sent. x_axis: %d, y_axis: %d", x_axis, y_axis);
+    LOG_DBG("x_axis: %d", x_axis);
+    LOG_DBG("y_axis: %d", y_axis);
+    // LOG_DBG("HID report successfully sent. x_axis: %d, y_axis: %d", x_axis, y_axis);
     // }
 }
 
@@ -232,6 +256,71 @@ static void send_hid_report(uint8_t x_axis, uint8_t y_axis)
 //         broadcast_subscription_change(r_id, enabled);
 //     }
 // }
+
+/**========================================================================
+ *                           Event handlers
+ *========================================================================**/
+static int module_init(void)
+{
+    LOG_INF("r_c: %f[m], r_p: %f[m]", r_c, r_p);
+    LOG_INF("Max translational speed: +-%f [m/s]", max_translational_speed_m_per_sec);
+    LOG_INF("Translational speed deadzone: +-%f [m/s]", min_translational_speed_m_per_sec);
+    LOG_INF("Max turn rate: +-%f [deg/s]", max_turn_rate_deg_per_sec);
+    LOG_INF("Alpha for encoder: %f", ((float)(CONFIG_ENCODER_MOVING_AVERAGE_ALPHA)/1000.0));
+    LOG_INF("dt: %f[ms]", (float)CONFIG_ENCODER_DELTA_TIME_MSEC);
+    LOG_INF("Difference sensitivty start threshold: %f*max trans speed", difference_sensitivity_start);
+    LOG_INF("Difference sensitivity end threshold: %f*max trans speed", difference_sensitivity_end);
+    // LOG_INF("Turn rate deadzone: +-%f [deg/s]", min_turn_rate_deg_per_sec);
+    /* HID service configuration */
+    struct bt_hids_init_param hids_init_param = {0};
+
+    hids_init_param.info.bcd_hid = BASE_USB_HID_SPEC_VERSION;
+    hids_init_param.info.b_country_code = 0x00;
+    hids_init_param.info.flags = BT_HIDS_REMOTE_WAKE |
+                                 BT_HIDS_NORMALLY_CONNECTABLE;
+
+    /* Attach report map */
+    hids_init_param.rep_map.data = hid_report_desc;
+    hids_init_param.rep_map.size = hid_report_desc_size;
+
+    /* Declare HID reports */
+    struct bt_hids_inp_rep *hids_input_report =
+        &hids_init_param.inp_rep_group_init.reports[0];
+
+    // const uint8_t buttons_rep_mask[] = {0b11000000};
+    hids_input_report->size = INPUT_REP_BUTTONS_NUM_BYTES;
+    hids_input_report->id = INPUT_REP_REF_BUTTONS_ID;
+    hids_input_report->rep_mask = NULL;
+    hids_init_param.inp_rep_group_init.cnt++;
+
+    // const uint8_t joystick_rep_mask[] = {0b00111100};
+    hids_input_report++;
+    hids_input_report->size = INPUT_REP_JOYSTICK_NUM_BYTES;
+    hids_input_report->id = INPUT_REP_REF_JOYSTICK_ID;
+    hids_input_report->rep_mask = NULL;
+    hids_init_param.inp_rep_group_init.cnt++;
+
+    // hids_input_report++;
+    // hids_input_report->size = INPUT_REP_RIGHT_JOYSTICK_NUM_BYTES;
+    // hids_input_report->id = INPUT_REP_REF_RIGHT_JOYSTICK_ID;
+    // hids_input_report->rep_mask = NULL;
+    // hids_init_param.inp_rep_group_init.cnt++;
+    // hids_init_param.pm_evt_handler = hids_pm_evt_handler;
+    return bt_hids_init(&hids_obj, &hids_init_param);
+}
+
+static void encoder_event_to_hid_value(const struct encoder_module_event *event, uint8_t *turn_rate, uint8_t *trans_speed)
+{
+    if (event->type != ENCODER_EVT_DATA_READY)
+    {
+        return;
+    }
+    float enc_a_rad_per_sec = degree_to_radian(event->rot_speed_a);
+    float enc_b_rad_per_sec = degree_to_radian(event->rot_speed_b);
+    (*turn_rate) = rot_speeds_to_hid_turn_value(enc_a_rad_per_sec, enc_b_rad_per_sec);
+    (*trans_speed) = rot_speeds_to_hid_move_value(enc_a_rad_per_sec, enc_b_rad_per_sec);
+    // LOG_DBG("Move Val: %d, Turn Val: %d", *trans_speed, *turn_rate);
+}
 
 static void notify_hids(const struct ble_peer_event *event)
 {
@@ -254,9 +343,9 @@ static void notify_hids(const struct ble_peer_event *event)
     case PEER_STATE_DISCONNECTED:
         __ASSERT_NO_MSG(cur_conn == event->id);
         err = bt_hids_disconnected(&hids_obj, event->id);
-		cur_conn = NULL;
-		secured = false;
-		protocol_boot = false;
+        cur_conn = NULL;
+        secured = false;
+        protocol_boot = false;
         if (err)
         {
             LOG_ERR("Connection context was not allocated");
@@ -284,7 +373,7 @@ static void notify_hids(const struct ble_peer_event *event)
         // else
         // {
         //     notify_secured_fn(NULL);
-            
+
         // }
 
         break;
@@ -304,11 +393,11 @@ static bool app_event_handler(const struct app_event_header *aeh)
 {
     if (is_encoder_module_event(aeh))
     {
-        // k_timer_start(&encoder_timeout, K_MSEC(CONFIG_HID_TIMEOUT_DURATION_MSEC), K_NO_WAIT);
-        uint8_t speed_diff = 0;
-        uint8_t speed_avg = 0;
-        encoder_event_to_speed(cast_encoder_module_event(aeh), &speed_diff, &speed_avg);
-        send_hid_report(speed_diff, speed_avg);
+        uint8_t trans_speed = 0;
+        uint8_t turn_rate = 0;
+        
+        encoder_event_to_hid_value(cast_encoder_module_event(aeh), &turn_rate, &trans_speed);
+        send_hid_report(turn_rate, trans_speed);
         return false;
     }
 
