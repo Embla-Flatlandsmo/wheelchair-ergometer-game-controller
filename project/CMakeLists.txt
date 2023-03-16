@@ -6,7 +6,7 @@
 
 cmake_minimum_required(VERSION 3.20.0)
 
-set(BOARD nrf52840dk_nrf52840)
+set(BOARD adafruit_itsybitsy_nrf52840)
 set(APPLICATION_CONFIG_DIR "configuration/\${BOARD}")
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 # find_package(Zephyr)

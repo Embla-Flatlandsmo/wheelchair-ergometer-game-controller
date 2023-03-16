@@ -108,10 +108,10 @@ void data_evt_timeout_work_handler(struct k_work *work)
 
 	// double hp_encoder_delta = sensor_value_to_double(&rot_a) 
 	float encoder_a_rot_delta = (float)sensor_value_to_double(&rot_a);
-	LOG_DBG("encoder_a_delta: %f", encoder_a_rot_delta);
+	// LOG_DBG("encoder_a_delta: %f", encoder_a_rot_delta);
 	float encoder_a_current_speed = encoder_a_rot_delta/dt;
 	encoder_a_rot_speed = moving_avg_filter(encoder_a_rot_speed, encoder_a_current_speed);
-	LOG_DBG("Encoder A rot speed: %f", encoder_a_rot_speed);
+	// LOG_DBG("Encoder A rot speed: %f", encoder_a_rot_speed);
 
 	err = sensor_sample_fetch(encoder_b_dev);
 	if (err != 0)
@@ -133,7 +133,7 @@ void data_evt_timeout_work_handler(struct k_work *work)
 	// LOG_DBG("Cumulative encoder B: %f [deg]", cumulative_encoder_b);
 	float encoder_b_current_speed = encoder_b_rot_delta/dt;
 	encoder_b_rot_speed = moving_avg_filter(encoder_b_rot_speed, encoder_b_current_speed);
-	LOG_DBG("Encoder B rot speed: %f", encoder_b_rot_speed);
+	// LOG_DBG("Encoder B rot speed: %f", encoder_b_rot_speed);
 	send_data_evt();
 }
 

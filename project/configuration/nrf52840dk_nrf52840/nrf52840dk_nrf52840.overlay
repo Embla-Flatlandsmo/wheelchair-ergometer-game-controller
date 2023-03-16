@@ -5,7 +5,7 @@
 		compatible = "nordic,qdec-gpio";
 		status = "okay";
 		label = "quadrature encoder A";
-		line-a-gpios = <&gpio1 7 0>;
+		line-a-gpios = <&gpio0 7 0>;
 		line-b-gpios = <&gpio1 8 0>;
 		ticks-per-rotation = <16>;
 	};
@@ -19,23 +19,3 @@
 		ticks-per-rotation = <16>;
 	};
 };
-
-// / {
-// 	qdecA: qdecA {
-// 		compatible = "nordic,qdec-gpio";
-// 		status = "okay";
-// 		label = "quadrature encoder A";
-// 		line-a-gpios = <&gpio0 26 0>;
-// 		line-b-gpios = <&gpio0 27 0>;
-// 		ticks-per-rotation = <16>;
-// 	};
-
-// 	qdecB: qdecB {
-// 		compatible = "nordic,qdec-gpio";
-// 		status = "okay";
-// 		label = "quadrature encoder B";
-// 		line-a-gpios = <&gpio1 8 0>;
-// 		line-b-gpios = <&gpio1 7 0>;
-// 		ticks-per-rotation = <16>;
-// 	};
-// };

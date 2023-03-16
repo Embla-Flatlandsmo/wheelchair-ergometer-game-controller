@@ -40,13 +40,16 @@ const float r_c = ((float)CONFIG_APP_CYLINDER_DIAMETER_MM) / (2.0*1000.0);
 const float r_p = ((float)CONFIG_APP_INTER_WHEEL_DISTANCE_MM) / (2.0*1000.0);
 
 /* Values needed for conversion from float->uint8 */
-const float max_translational_speed_m_per_sec = ((float)CONFIG_HID_MODULE_MAX_OUTPUT_SPEED_MM_PER_SEC) / 1000.0f;
-const float min_translational_speed_m_per_sec = ((float)CONFIG_HID_MODULE_MIN_OUTPUT_SPEED_MM_PER_SEC) / 1000.0f;
-const float max_turn_rate_deg_per_sec = ((float)CONFIG_HID_MODULE_MAX_OUTPUT_TURN_RATE_DEG_PER_SEC);
-const float min_turn_rate_deg_per_sec = ((float)CONFIG_HID_MODULE_MIN_OUTPUT_TURN_RATE_DEG_PER_SEC);
+/**----------------------
+ *!    ROUND 1
+ *------------------------**/
+const float max_translational_speed_m_per_sec = 3.5;
+const float min_translational_speed_m_per_sec = 0.0;
+const float max_turn_rate_deg_per_sec = 150.0;
+const float min_turn_rate_deg_per_sec = 0.0;
+const float difference_sensitivity_start = 0.3;
+const float difference_sensitivity_end = 0.65;
 
-const float difference_sensitivity_start = 0.4;
-const float difference_sensitivity_end = 0.7;
 
 #define BASE_USB_HID_SPEC_VERSION 0x0101
 
@@ -178,22 +181,14 @@ static uint8_t rot_speeds_to_hid_turn_value(float enc_a_rad_per_sec, float enc_b
 {
     float turn_rate = rot_speeds_to_turn_rate(enc_a_rad_per_sec, enc_b_rad_per_sec);
     turn_rate = radian_to_degree(turn_rate);
-    LOG_DBG("Unclamped turn rate: %f [deg/s]", turn_rate);
-    LOG_DBG("Clamped turn rate: %f [deg/s]", CLAMP(turn_rate, -max_turn_rate_deg_per_sec, max_turn_rate_deg_per_sec));
-    // if (IN_RANGE(turn_rate, -min_turn_rate_deg_per_sec, min_turn_rate_deg_per_sec))
-    // {
-    //     turn_rate = 0.0;
-    // }
+    // LOG_DBG("Unclamped turn rate: %f [deg/s]", turn_rate);
+    // LOG_DBG("Clamped turn rate: %f [deg/s]", CLAMP(turn_rate, -max_turn_rate_deg_per_sec, max_turn_rate_deg_per_sec));
     float speed = rot_speeds_to_translational_speed(enc_a_rad_per_sec, enc_b_rad_per_sec);
     speed = speed > 0.0 ? speed : -speed;
     float difference_sensitivity = map_range_f(speed, max_translational_speed_m_per_sec * difference_sensitivity_start, max_translational_speed_m_per_sec * difference_sensitivity_end, 1.0, 0.0);
     turn_rate = turn_rate*difference_sensitivity;
-    LOG_DBG("Difference sensitivity: %f",difference_sensitivity);    
-    LOG_DBG("Sensitivity-adjusted turn rate: %f [deg/s]", turn_rate);
-    // float turn_rate_sign = turn_rate < 0.0 ? -1.0 : 1.0;
-    // uint8_t deadzoned_value = map_range(turn_rate*turn_rate_sign, min_turn_rate_deg_per_sec, max_turn_rate_deg_per_sec, 0, 127);
-    // uint8_t output_value = 128+turn_rate_sign*deadzoned_value;
-    // return output_value;
+    // LOG_DBG("Difference sensitivity: %f",difference_sensitivity);    
+    // LOG_DBG("Sensitivity-adjusted turn rate: %f [deg/s]", turn_rate);
     return map_range(turn_rate, -max_turn_rate_deg_per_sec, max_turn_rate_deg_per_sec, 0, 255);
 }
 
