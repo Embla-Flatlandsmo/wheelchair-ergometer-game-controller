@@ -43,13 +43,21 @@ const float r_p = ((float)CONFIG_APP_INTER_WHEEL_DISTANCE_MM) / (2.0*1000.0);
 /**----------------------
  *!    ROUND 1
  *------------------------**/
-const float max_translational_speed_m_per_sec = 3.5;
-const float min_translational_speed_m_per_sec = 0.0;
-const float max_turn_rate_deg_per_sec = 150.0;
-const float min_turn_rate_deg_per_sec = 0.0;
-const float difference_sensitivity_start = 0.3;
-const float difference_sensitivity_end = 0.65;
-
+// const float max_translational_speed_m_per_sec = 3.5;
+// const float min_translational_speed_m_per_sec = 0.0;
+// const float max_turn_rate_deg_per_sec = 150.0;
+// const float min_turn_rate_deg_per_sec = 0.0;
+// const float difference_sensitivity_start = 0.3;
+// const float difference_sensitivity_end = 0.65;
+/**----------------------
+ *!    ROUND 2
+ *------------------------**/
+const float max_translational_speed_m_per_sec = 3.5f;
+const float min_translational_speed_m_per_sec = 0.0f;
+const float max_turn_rate_deg_per_sec = 30.0f;
+const float min_turn_rate_deg_per_sec = 0.0f;
+const float difference_sensitivity_start = 0.3f;
+const float difference_sensitivity_end = 0.65f;
 
 #define BASE_USB_HID_SPEC_VERSION 0x0101
 
