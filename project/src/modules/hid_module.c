@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <limits.h>
+#include <math.h>
 
 #include <zephyr/kernel.h>
 #include <zephyr/types.h>
@@ -166,6 +167,7 @@ static uint8_t map_range(float value, float input_start, float input_end, uint8_
     // return CLAMP(output_start + output_without_start_offset, output_start, output_end);
 }
 
+
 static uint8_t rot_speeds_to_hid_move_value(float enc_a_rad_per_sec, float enc_b_rad_per_sec)
 {
     float translational_speed = rot_speeds_to_translational_speed(enc_a_rad_per_sec, enc_b_rad_per_sec);
@@ -185,6 +187,19 @@ static uint8_t rot_speeds_to_hid_move_value(float enc_a_rad_per_sec, float enc_b
     return map_range(translational_speed, -max_translational_speed_m_per_sec, max_translational_speed_m_per_sec, 0, 255);
 }
 
+static float filter_turn_rate(float turn_rate)
+{
+    ASSERT(turn_rate >= 0.0);
+    // float filter_start = 0.2*max_turn_rate_deg_per_sec;
+    float filter_start = 1.0;
+    float filter_end = max_turn_rate_deg_per_sec; 
+    if (turn_rate <= filter_start)
+    {
+        return 0.0;
+    }
+    return pow((turn_rate-filter_start)/(filter_end-filter_start), 2);
+}
+
 static uint8_t rot_speeds_to_hid_turn_value(float enc_a_rad_per_sec, float enc_b_rad_per_sec)
 {
     float turn_rate = rot_speeds_to_turn_rate(enc_a_rad_per_sec, enc_b_rad_per_sec);
@@ -192,11 +207,19 @@ static uint8_t rot_speeds_to_hid_turn_value(float enc_a_rad_per_sec, float enc_b
     // LOG_DBG("Unclamped turn rate: %f [deg/s]", turn_rate);
     // LOG_DBG("Clamped turn rate: %f [deg/s]", CLAMP(turn_rate, -max_turn_rate_deg_per_sec, max_turn_rate_deg_per_sec));
     float speed = rot_speeds_to_translational_speed(enc_a_rad_per_sec, enc_b_rad_per_sec);
-    speed = speed > 0.0 ? speed : -speed;
-    float difference_sensitivity = map_range_f(speed, max_translational_speed_m_per_sec * difference_sensitivity_start, max_translational_speed_m_per_sec * difference_sensitivity_end, 1.0, 0.0);
-    turn_rate = turn_rate*difference_sensitivity;
+    
+    // APPROACH 1
+    // speed = speed > 0.0 ? speed : -speed;
+    // float difference_sensitivity = map_range_f(speed, max_translational_speed_m_per_sec * difference_sensitivity_start, max_translational_speed_m_per_sec * difference_sensitivity_end, 1.0, 0.0);
+    // turn_rate = turn_rate*difference_sensitivity;
     // LOG_DBG("Difference sensitivity: %f",difference_sensitivity);    
     // LOG_DBG("Sensitivity-adjusted turn rate: %f [deg/s]", turn_rate);
+
+    // APPROACH 2
+    float turn_rate_sign = turn_rate >= 0.0 ? 1.0 : -1.0;
+    turn_rate *= turn_rate_sign; // must be positive
+    turn_rate = turn_rate_sign*filter_turn_rate(turn_rate);
+
     return map_range(turn_rate, -max_turn_rate_deg_per_sec, max_turn_rate_deg_per_sec, 0, 255);
 }
 
