@@ -55,8 +55,8 @@ const float r_p = ((float)CONFIG_APP_INTER_WHEEL_DISTANCE_MM) / (2.0*1000.0);
  *------------------------**/
 const float max_translational_speed_m_per_sec = 3.5f;
 const float min_translational_speed_m_per_sec = 0.0f;
-const float max_turn_rate_deg_per_sec = 30.0f;
-const float min_turn_rate_deg_per_sec = 0.0f;
+const float max_turn_rate_deg_per_sec = 60.0f;
+// const float min_turn_rate_deg_per_sec = 0.0f;
 const float difference_sensitivity_start = 0.3f;
 const float difference_sensitivity_end = 0.65f;
 
@@ -187,17 +187,39 @@ static uint8_t rot_speeds_to_hid_move_value(float enc_a_rad_per_sec, float enc_b
     return map_range(translational_speed, -max_translational_speed_m_per_sec, max_translational_speed_m_per_sec, 0, 255);
 }
 
+const float sensitivity_alpha = 0.2;
+static float filter_sensitivity(float sensitivity)
+{
+    float prev_sensitivity_value = 0.0;
+    if (sensitivity >= 0.95) {
+        prev_sensitivity_value = 1.0;
+        return prev_sensitivity_value;
+    }
+    float filtered_sensitivity = sensitivity_alpha*prev_sensitivity_value-(1.0-sensitivity_alpha)*sensitivity;
+    prev_sensitivity_value = MIN(filtered_sensitivity, sensitivity);
+    return prev_sensitivity_value;
+}
+
 static float filter_turn_rate(float turn_rate)
 {
-    ASSERT(turn_rate >= 0.0);
+    // __ASSERT_NO_MSG(turn_rate >= 0.0)
     // float filter_start = 0.2*max_turn_rate_deg_per_sec;
-    float filter_start = 1.0;
-    float filter_end = max_turn_rate_deg_per_sec; 
+    // if (turn_rate == max_turn_rate_deg_per_sec) {
+    //     return turn_rate;
+    // }
+    // deadzone_width = CLAMP(deadzone_width, 0.0, 0.8);
+    const float quadratic_width = max_turn_rate_deg_per_sec;
+    float filter_start = 0.0;
+    float filter_end = quadratic_width; 
     if (turn_rate <= filter_start)
     {
         return 0.0;
     }
-    return pow((turn_rate-filter_start)/(filter_end-filter_start), 2);
+    // if (turn_rate >= filter_end) {
+    //     return turn_rate;   
+    // }
+    return filter_end*pow((turn_rate-filter_start)/filter_end, 6);
+    // return pow((turn_rate-filter_start)/(filter_end-filter_start), 2);
 }
 
 static uint8_t rot_speeds_to_hid_turn_value(float enc_a_rad_per_sec, float enc_b_rad_per_sec)
@@ -219,6 +241,14 @@ static uint8_t rot_speeds_to_hid_turn_value(float enc_a_rad_per_sec, float enc_b
     float turn_rate_sign = turn_rate >= 0.0 ? 1.0 : -1.0;
     turn_rate *= turn_rate_sign; // must be positive
     turn_rate = turn_rate_sign*filter_turn_rate(turn_rate);
+
+    // APPROACH 3: same as 2 but with widening
+    // float turn_rate_sign = turn_rate >= 0.0 ? 1.0 : -1.0;
+    // turn_rate *= turn_rate_sign; // must be positive
+    // speed = speed > 0.0 ? speed : -speed;
+    // float difference_sensitivity = map_range_f(speed, max_translational_speed_m_per_sec * difference_sensitivity_start, max_translational_speed_m_per_sec * difference_sensitivity_end, 1.0, 0.0);
+    // difference_sensitivity = filter_sensitivity(difference_sensitivity);
+    // turn_rate = turn_rate_sign * filter_turn_rate(turn_rate, 1.0-difference_sensitivity);
 
     return map_range(turn_rate, -max_turn_rate_deg_per_sec, max_turn_rate_deg_per_sec, 0, 255);
 }
