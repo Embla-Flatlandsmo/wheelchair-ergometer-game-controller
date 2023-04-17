@@ -45,7 +45,8 @@ config HID_MODULE_MAX_OUTPUT_TURN_RATE_DEG_PER_SEC
     int "The turning rate which leads to saturation and max output in HID report"
     default 400
 
-
+config HID_MODULE_LOG_FOR_PLOT
+	bool "Log HID outputs for plotting purposes"
 endif # HID_MODULE
 
 module = HID_MODULE

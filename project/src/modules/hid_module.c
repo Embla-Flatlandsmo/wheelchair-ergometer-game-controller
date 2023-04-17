@@ -53,10 +53,16 @@ const float r_p = ((float)CONFIG_APP_INTER_WHEEL_DISTANCE_MM) / (2.0*1000.0);
 /**----------------------
  *!    ROUND 2
  *------------------------**/
+// const float max_translational_speed_m_per_sec = 3.5f;
+// const float max_turn_rate_deg_per_sec = 60.0f;
+// const float difference_sensitivity_start = 0.3f;
+// const float difference_sensitivity_end = 0.65f;
+
+/**----------------------
+ *!    ROUND 3
+ *------------------------**/
 const float max_translational_speed_m_per_sec = 3.5f;
-const float min_translational_speed_m_per_sec = 0.0f;
-const float max_turn_rate_deg_per_sec = 60.0f;
-// const float min_turn_rate_deg_per_sec = 0.0f;
+const float max_turn_rate_deg_per_sec = 150.0f;
 const float difference_sensitivity_start = 0.3f;
 const float difference_sensitivity_end = 0.65f;
 
@@ -88,8 +94,8 @@ const float difference_sensitivity_end = 0.65f;
 // /* Index of Game pad Input Report containing joystick data. */
 // #define INPUT_REP_JOYSTICK_INDEX 0
 const uint8_t joystick_neutral = 128;
-
-
+const int readings_per_log = 1;
+static int message_counter = 0;
 /* HIDS instance. */
 BT_HIDS_DEF(hids_obj,
             INPUT_REP_BUTTONS_NUM_BYTES,
@@ -171,13 +177,16 @@ static uint8_t map_range(float value, float input_start, float input_end, uint8_
 static uint8_t rot_speeds_to_hid_move_value(float enc_a_rad_per_sec, float enc_b_rad_per_sec)
 {
     float translational_speed = rot_speeds_to_translational_speed(enc_a_rad_per_sec, enc_b_rad_per_sec);
-
-    LOG_DBG("Unclamped translational speed: %f [m/s]", translational_speed);
-    LOG_DBG("Clamped translational speed: %f [m/s]", CLAMP(translational_speed, -max_translational_speed_m_per_sec, max_translational_speed_m_per_sec));
-    if (IN_RANGE(translational_speed, -min_translational_speed_m_per_sec, min_translational_speed_m_per_sec))
-    {
-        translational_speed = 0.0;
-    }
+// #if IS_ENABLED(CONFIG_HID_MODULE_LOG_FOR_PLOT)
+//     if (message_counter % readings_per_log == 0) {
+//     LOG_DBG("Unclamped translational speed: %f [m/s]", translational_speed);
+//     LOG_DBG("Clamped translational speed: %f [m/s]", CLAMP(translational_speed, -max_translational_speed_m_per_sec, max_translational_speed_m_per_sec));
+//     }
+// #endif
+    // if (IN_RANGE(translational_speed, -min_translational_speed_m_per_sec, min_translational_speed_m_per_sec))
+    // {
+    //     translational_speed = 0.0;
+    // }
     translational_speed *= -1; // y-axis seems to be inverted on game controllers, i.e. 0=positive, max and 255=negative
     // float speed_sign = translational_speed < 0.0 ? -1.0 : 1.0;
     // bool is_negative = turn_rate < 0.0;
@@ -187,15 +196,15 @@ static uint8_t rot_speeds_to_hid_move_value(float enc_a_rad_per_sec, float enc_b
     return map_range(translational_speed, -max_translational_speed_m_per_sec, max_translational_speed_m_per_sec, 0, 255);
 }
 
-const float sensitivity_alpha = 0.2;
+const float sensitivity_alpha = 0.4;
 static float filter_sensitivity(float sensitivity)
 {
-    float prev_sensitivity_value = 0.0;
-    if (sensitivity >= 0.95) {
-        prev_sensitivity_value = 1.0;
-        return prev_sensitivity_value;
-    }
-    float filtered_sensitivity = sensitivity_alpha*prev_sensitivity_value-(1.0-sensitivity_alpha)*sensitivity;
+    static float prev_sensitivity_value = 1.0;
+    // if (sensitivity >= 0.95) {
+    //     prev_sensitivity_value = 1.0;
+    //     return prev_sensitivity_value;
+    // }
+    float filtered_sensitivity = sensitivity_alpha*prev_sensitivity_value+(1.0-sensitivity_alpha)*sensitivity;
     prev_sensitivity_value = MIN(filtered_sensitivity, sensitivity);
     return prev_sensitivity_value;
 }
@@ -208,23 +217,21 @@ static float filter_turn_rate(float turn_rate)
     //     return turn_rate;
     // }
     // deadzone_width = CLAMP(deadzone_width, 0.0, 0.8);
-    const float quadratic_width = max_turn_rate_deg_per_sec;
     float filter_start = 0.0;
-    float filter_end = quadratic_width; 
+    float filter_end = 30.0; 
     if (turn_rate <= filter_start)
     {
         return 0.0;
     }
-    // if (turn_rate >= filter_end) {
-    //     return turn_rate;   
-    // }
-    return filter_end*pow((turn_rate-filter_start)/filter_end, 6);
-    // return pow((turn_rate-filter_start)/(filter_end-filter_start), 2);
+    if (turn_rate >= filter_end) {
+        return turn_rate;   
+    }
+    return filter_end*pow((turn_rate-filter_start)/filter_end, 2);
 }
 
 static uint8_t rot_speeds_to_hid_turn_value(float enc_a_rad_per_sec, float enc_b_rad_per_sec)
 {
-    float turn_rate = rot_speeds_to_turn_rate(enc_a_rad_per_sec, enc_b_rad_per_sec);
+    float turn_rate = rot_speeds_to_turn_rate(enc_a_rad_per_sec, enc_b_rad_per_sec)/4.0;
     turn_rate = radian_to_degree(turn_rate);
     // LOG_DBG("Unclamped turn rate: %f [deg/s]", turn_rate);
     // LOG_DBG("Clamped turn rate: %f [deg/s]", CLAMP(turn_rate, -max_turn_rate_deg_per_sec, max_turn_rate_deg_per_sec));
@@ -238,19 +245,32 @@ static uint8_t rot_speeds_to_hid_turn_value(float enc_a_rad_per_sec, float enc_b
     // LOG_DBG("Sensitivity-adjusted turn rate: %f [deg/s]", turn_rate);
 
     // APPROACH 2
-    float turn_rate_sign = turn_rate >= 0.0 ? 1.0 : -1.0;
-    turn_rate *= turn_rate_sign; // must be positive
-    turn_rate = turn_rate_sign*filter_turn_rate(turn_rate);
-
-    // APPROACH 3: same as 2 but with widening
     // float turn_rate_sign = turn_rate >= 0.0 ? 1.0 : -1.0;
     // turn_rate *= turn_rate_sign; // must be positive
-    // speed = speed > 0.0 ? speed : -speed;
-    // float difference_sensitivity = map_range_f(speed, max_translational_speed_m_per_sec * difference_sensitivity_start, max_translational_speed_m_per_sec * difference_sensitivity_end, 1.0, 0.0);
-    // difference_sensitivity = filter_sensitivity(difference_sensitivity);
-    // turn_rate = turn_rate_sign * filter_turn_rate(turn_rate, 1.0-difference_sensitivity);
-
-    return map_range(turn_rate, -max_turn_rate_deg_per_sec, max_turn_rate_deg_per_sec, 0, 255);
+    // // turn_rate = turn_rate_sign*filter_turn_rate(turn_rate);
+    // float output_turn_rate = turn_rate_sign*filter_turn_rate(turn_rate);
+    // APPROACH 3: same as 2 but with less sensitivity for higher speeds
+    float turn_rate_sign = turn_rate >= 0.0 ? 1.0 : -1.0;
+    turn_rate *= turn_rate_sign; // must be positive
+    float speed_signed = speed;
+    speed = speed > 0.0 ? speed : -speed;
+    float difference_sensitivity = map_range_f(speed, max_translational_speed_m_per_sec * difference_sensitivity_start, max_translational_speed_m_per_sec * difference_sensitivity_end, 1.0, 0.6);
+    float filtered_difference_sensitivity = filter_sensitivity(difference_sensitivity);
+    float filtered_turn_rate = turn_rate_sign * filter_turn_rate(turn_rate);
+    float output_turn_rate = filtered_turn_rate * filtered_difference_sensitivity;
+#if IS_ENABLED(CONFIG_HID_MODULE_LOG_FOR_PLOT)
+    // if (message_counter % readings_per_log == 0) {
+        LOG_DBG("S, SC, UTR, DS, FDS, FTR, FRTR = (%f, %f, %f, %f, %f, %f, %f)", speed_signed, CLAMP(speed_signed, -max_translational_speed_m_per_sec, max_translational_speed_m_per_sec), turn_rate, difference_sensitivity, filtered_difference_sensitivity, filtered_turn_rate, output_turn_rate);
+        // LOG_DBG("Unclamped turn rate: %f [deg/s]", turn_rate);
+        // // LOG_DBG("Clamped turn rate: %f [deg/s]", CLAMP(turn_rate, -max_turn_rate_deg_per_sec, max_turn_rate_deg_per_sec));
+        // LOG_DBG("Difference sensitivity: %f", difference_sensitivity);
+        // LOG_DBG("Filtered difference sensitivity: %f", filtered_difference_sensitivity);
+        // LOG_DBG("Filtered turn rate: %f [deg/s]", filtered_turn_rate);
+        // LOG_DBG("Filtered and reduced (final) turn rate: %f [deg/s]", output_turn_rate);
+        // LOG_DBG("Sensitivity-adjusted turn rate: %f [deg/s]", turn_rate);
+    // }
+#endif
+    return map_range(output_turn_rate, -max_turn_rate_deg_per_sec, max_turn_rate_deg_per_sec, 0, 255);
 }
 
 /**============================================
@@ -296,10 +316,13 @@ static void send_hid_report(uint8_t x_axis, uint8_t y_axis)
     //     LOG_ERR("Cannot send buttons report (%d)", err);
     //     return;
     // }
-    LOG_DBG("x_axis: %d", x_axis);
-    LOG_DBG("y_axis: %d", y_axis);
-    // LOG_DBG("HID report successfully sent. x_axis: %d, y_axis: %d", x_axis, y_axis);
-    // }
+
+    if (message_counter % readings_per_log == 0)
+    {
+        LOG_DBG("x_axis, y_axis: (%d, %d)", x_axis, y_axis);
+    }
+        // LOG_DBG("HID report successfully sent. x_axis: %d, y_axis: %d", x_axis, y_axis);
+        // }
 }
 
 // static void notify_secured_fn(struct k_work *work)
@@ -320,10 +343,11 @@ static int module_init(void)
 {
     LOG_INF("r_c: %f[m], r_p: %f[m]", r_c, r_p);
     LOG_INF("Max translational speed: +-%f [m/s]", max_translational_speed_m_per_sec);
-    LOG_INF("Translational speed deadzone: +-%f [m/s]", min_translational_speed_m_per_sec);
+    // LOG_INF("Translational speed deadzone: +-%f [m/s]", min_translational_speed_m_per_sec);
     LOG_INF("Max turn rate: +-%f [deg/s]", max_turn_rate_deg_per_sec);
     LOG_INF("Alpha for encoder: %f", ((float)(CONFIG_ENCODER_MOVING_AVERAGE_ALPHA)/1000.0));
     LOG_INF("dt: %f[ms]", (float)CONFIG_ENCODER_DELTA_TIME_MSEC);
+    LOG_INF("Encoder readings per log output: %d", readings_per_log);
     LOG_INF("Difference sensitivty start threshold: %f*max trans speed", difference_sensitivity_start);
     LOG_INF("Difference sensitivity end threshold: %f*max trans speed", difference_sensitivity_end);
     // LOG_INF("Turn rate deadzone: +-%f [deg/s]", min_turn_rate_deg_per_sec);
@@ -454,6 +478,8 @@ static bool app_event_handler(const struct app_event_header *aeh)
         
         encoder_event_to_hid_value(cast_encoder_module_event(aeh), &turn_rate, &trans_speed);
         send_hid_report(turn_rate, trans_speed);
+
+        message_counter++;
         return false;
     }
 
