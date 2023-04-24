@@ -3,7 +3,7 @@
 This project aims to interface an Invictus Trainer with a computer or a phone by using encoders and an nRF52840.
 
 ## Installing the SDK
-The project uses the [Zephyr RTOS](https://docs.zephyrproject.org/latest/) and the [nRF Connect SDK](https://developer.nordicsemi.com/nRF_Connect_SDK/doc/latest/nrf/index.html). To get started, you must download the nRF Connect SDK which comes with the Zephyr RTOS included: [See the installation guide for a how-to](https://developer.nordicsemi.com/nRF_Connect_SDK/doc/2.0.2/nrf/gs_assistant.html)
+The project uses the [Zephyr RTOS](https://docs.zephyrproject.org/latest/) and the [nRF Connect SDK](https://developer.nordicsemi.com/nRF_Connect_SDK/doc/2.1.2/nrf/introduction.html). To get started, you must download the nRF Connect SDK which comes with the Zephyr RTOS included: [See the installation guide for a how-to](https://developer.nordicsemi.com/nRF_Connect_SDK/doc/2.1.2/nrf/gs_assistant.html)
 
 ## Project Setup
 ### Using an existing nRF Connect SDK installation (recommended)
@@ -12,15 +12,15 @@ The project uses the [Zephyr RTOS](https://docs.zephyrproject.org/latest/) and t
 Note: In Zephyr terminology, this is a [Zephyr workspace application](https://docs.zephyrproject.org/latest/develop/application/index.html#zephyr-repository-application)
 
 ### Creating a new west workspace (currently not working)
-- Ensure all required software for building nRF Connect SDK v2.1.2 is installed. A list of required software and appropriate versions can be found [here](https://developer.nordicsemi.com/nRF_Connect_SDK/doc/2.0.2/nrf/gs_recommended_versions.html).
+- Ensure all required software for building nRF Connect SDK v2.1.2 is installed. A list of required software and appropriate versions can be found [here](https://developer.nordicsemi.com/nRF_Connect_SDK/doc/2.1.2/nrf/gs_recommended_versions.html).
 - Create project directory
 - Inside project directory, run command ```west init -m https://github.com/Embla-Flatlandsmo/wheelchair-ergometer-game-controller.git```. This will set up the west configurations for the project directory.
 - In the same directory, run ```west update```. This will download the project files, nRF Connect SDK v2.1.2, and their dependencies.
 - Run ```west zephyr-export``` so we can successfully build applications.
-- Navigate to folder containing firmware (`wheelchair-ergometer-game-controller`) and use west commands for building and flashing the firmware as described in the [developer guide](https://developer.nordicsemi.com/nRF_Connect_SDK/doc/2.0.2/zephyr/guides/west/build-flash-debug.html#west-build-flash-debug).
+- Navigate to folder containing firmware (`wheelchair-ergometer-game-controller`) and use west commands for building and flashing the firmware as described in the [developer guide](https://developer.nordicsemi.com/nRF_Connect_SDK/doc/2.1.2/zephyr/guides/west/build-flash-debug.html#west-build-flash-debug).
 
 ## Building
-To build a project, follow [the official nRF Connect SDK guide](https://developer.nordicsemi.com/nRF_Connect_SDK/doc/2.0.2/nrf/gs_programming.html)
+To build a project, follow [the official nRF Connect SDK guide](https://developer.nordicsemi.com/nRF_Connect_SDK/doc/2.1.2/nrf/gs_programming.html)
 
 In short, navigate to `wheelchair-ergometer-game-contrller/project` and call `west build -b nrf52840dk_nrf52840` for building for the nRF52840 DK. Call `west build -b adafruit_itsybitsy_nrf52840` to build for the Adafruit ItsyBitsy nRF52840 Express.
 
