@@ -18,10 +18,6 @@ struct event_prototype {
 	uint8_t event_id;
 };
 
-/* List containing metadata on active modules in the application. */
-static sys_slist_t module_list = SYS_SLIST_STATIC_INIT(&module_list);
-static K_MUTEX_DEFINE(module_list_lock);
-
 /* Structure containing general information about the modules in the application. */
 static struct modules_info {
 	/* Modules that support shutdown. */
@@ -140,82 +136,4 @@ int module_enqueue_msg_with_delay(struct module_data *module, void *msg, k_timeo
 int module_enqueue_msg(struct module_data *module, void *msg)
 {
 	return module_enqueue_msg_with_delay(module, msg, K_NO_WAIT);
-}
-
-bool modules_shutdown_register(uint32_t id_reg)
-{
-	bool retval = false;
-	struct module_data *module, *next_module = NULL;
-
-	if (id_reg == 0) {
-		LOG_WRN("Passed in module ID cannot be 0");
-		return false;
-	}
-
-	k_mutex_lock(&module_list_lock, K_FOREVER);
-	SYS_SLIST_FOR_EACH_CONTAINER_SAFE(&module_list, module, next_module, header) {
-		if (module->id == id_reg) {
-			if (module->supports_shutdown) {
-				/* A module shutdown has been registered. Decrease the number of
-				 * active modules in the application and delete the list entry for
-				 * the corresponding module.
-				 */
-				sys_slist_find_and_remove(&module_list, &module->header);
-				atomic_dec(&modules_info.active_modules_count);
-				atomic_dec(&modules_info.shutdown_supported_count);
-
-				LOG_WRN("Module \"%s\" shutdown registered", module->name);
-			} else {
-				goto exit;
-			}
-			break;
-		}
-	};
-
-	if (modules_info.shutdown_supported_count == 0) {
-		/* All modules in the application have reported a shutdown. */
-		retval = true;
-	}
-
-exit:
-	k_mutex_unlock(&module_list_lock);
-	return retval;
-}
-
-int module_start(struct module_data *module)
-{
-	if (module == NULL) {
-		LOG_ERR("Module metadata is NULL");
-		return -EINVAL;
-	}
-
-	if (module->name == NULL) {
-		LOG_ERR("Module name is NULL");
-		return -EINVAL;
-	}
-
-	module->id = k_cycle_get_32();
-	atomic_inc(&modules_info.active_modules_count);
-
-	if (module->supports_shutdown) {
-		atomic_inc(&modules_info.shutdown_supported_count);
-	}
-
-	/* Append passed in module metadata to linked list. */
-	k_mutex_lock(&module_list_lock, K_FOREVER);
-	sys_slist_append(&module_list, &module->header);
-	k_mutex_unlock(&module_list_lock);
-
-	if (module->thread_id) {
-		LOG_DBG("Module \"%s\" with thread ID %p started", module->name, module->thread_id);
-	} else {
-		LOG_DBG("Module \"%s\" started", module->name);
-	}
-
-	return 0;
-}
-
-uint32_t module_active_count_get(void)
-{
-	return atomic_get(&modules_info.active_modules_count);
 }

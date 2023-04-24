@@ -36,6 +36,7 @@ static float cumulative_encoder_b = 0.0;
 static const float alpha = ((float)CONFIG_ENCODER_MOVING_AVERAGE_ALPHA)/1000.0;
 static const float dt = (float)DT_MSEC/1000.0;
 
+
 #if CONFIG_ENCODER_SIMULATE_INPUT
 #define MAX_SIMULATED_ENCODER_TICKS CONFIG_ENCODER_SIMULATE_INPUT_INTERVAL
 #else
@@ -45,6 +46,9 @@ static const float dt = (float)DT_MSEC/1000.0;
 static float simulated_encoder_value = 1000000.0;
 static int simulated_encoder_ticks = 0;
 
+/**
+ * @brief Sends the encoder values from the encoder module to other listening modules
+ */
 static void send_data_evt(void)
 {
 	struct encoder_module_event *encoder_module_event = new_encoder_module_event();
@@ -54,10 +58,19 @@ static void send_data_evt(void)
 	APP_EVENT_SUBMIT(encoder_module_event);
 }
 
-static float moving_avg_filter(float y_prev, float y)
+/**
+ * @brief Filters the value using first order IIR filter
+ *         y[t]=alpha*y[t-1]+(1-alpha)*x[t]
+ * 
+ * @param y_prev Previous output value
+ * @param x New sampled value
+ * @return float Outut value for the current time step
+ */
+static float moving_avg_filter(float y_prev, float x)
 {
-	return alpha*y_prev + (1-alpha)*y;
+	return alpha*y_prev + (1-alpha)*x;
 }
+
 
 static void data_evt_timeout_work_handler(struct k_work *work);
 K_WORK_DEFINE(data_evt_timeout_work, data_evt_timeout_work_handler);
@@ -69,6 +82,11 @@ void data_evt_timeout_handler(struct k_timer *dummy)
 
 K_TIMER_DEFINE(data_evt_timeout, data_evt_timeout_handler, NULL);
 
+/**
+ * @brief Functions that run upon the expiration of each sampling interval
+ * 
+ * @param work idk
+ */
 void data_evt_timeout_work_handler(struct k_work *work)
 {
 	if (IS_ENABLED(CONFIG_ENCODER_SIMULATE_INPUT))
@@ -105,13 +123,10 @@ void data_evt_timeout_work_handler(struct k_work *work)
 		LOG_ERR("Encoder A sensor_channel_get error: %d\n", err);
 		return;
 	}
-
-	// double hp_encoder_delta = sensor_value_to_double(&rot_a) 
 	float encoder_a_rot_delta = (float)sensor_value_to_double(&rot_a);
-	// LOG_DBG("encoder_a_delta: %f", encoder_a_rot_delta);
 	float encoder_a_current_speed = encoder_a_rot_delta/dt;
 	encoder_a_rot_speed = moving_avg_filter(encoder_a_rot_speed, encoder_a_current_speed);
-	// LOG_DBG("Encoder A rot speed: %f", encoder_a_rot_speed);
+	LOG_DBG("Encoder A rot speed: %f", encoder_a_rot_speed);
 
 	err = sensor_sample_fetch(encoder_b_dev);
 	if (err != 0)
@@ -128,12 +143,9 @@ void data_evt_timeout_work_handler(struct k_work *work)
 	}
 
 	float encoder_b_rot_delta = (float)sensor_value_to_double(&rot_b);
-	// LOG_DBG("encoder_b_delta: %f", encoder_b_rot_delta);
-	// cumulative_encoder_b += encoder_b_rot_delta;
-	// LOG_DBG("Cumulative encoder B: %f [deg]", cumulative_encoder_b);
 	float encoder_b_current_speed = encoder_b_rot_delta/dt;
 	encoder_b_rot_speed = moving_avg_filter(encoder_b_rot_speed, encoder_b_current_speed);
-	// LOG_DBG("Encoder B rot speed: %f", encoder_b_rot_speed);
+	LOG_DBG("Encoder B rot speed: %f", encoder_b_rot_speed);
 	send_data_evt();
 }
 

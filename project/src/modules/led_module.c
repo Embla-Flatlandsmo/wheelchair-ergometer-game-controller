@@ -20,27 +20,6 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(MODULE, CONFIG_LED_MODULE_LOG_LEVEL);
 
-const float light_intensity = 0.1;
-// static const struct led_rgb colors[] = {
-// 	{ .r = 255*light_intensity, .g = 0,						.b = 0,						}, /* red */
-// 	{ .r = 0,					.g = 255*light_intensity,	.b = 0,						}, /* green */
-// 	{ .r = 0,					.g = 0,						.b = 255*light_intensity,	}, /* blue */
-// 	{ .r = 255*light_intensity,	.g = 165*light_intensity,	.b = 0,						}, /* orange */
-// 	{ .r = 0,					.g = 0,						.b = 0,						}, /* black */
-// };
-static const struct led_rgb colors[] = {
-	{ .r = 25, .g = 0,						.b = 0,						}, /* red */
-	{ .r = 0,					.g = 25,	.b = 0,						}, /* green */
-	{ .r = 0,					.g = 0,						.b = 25,	}, /* blue */
-	{ .r = 25,	.g = 165*light_intensity,	.b = 0,						}, /* orange */
-	{ .r = 0,					.g = 0,						.b = 0,						}, /* black */
-};
-
-enum blink_type_index {
-	ACTIVE,
-	BACKGROUND,
-};
-
 typedef enum
 {
 	RED,
@@ -49,6 +28,21 @@ typedef enum
 	ORANGE,
 	BLACK,
 } led_color_t;
+
+const float light_intensity = 0.1;
+
+static const struct led_rgb colors[] = {
+	{ .r = 25, 			.g = 0,			.b = 0,		}, /* red */
+	{ .r = 0,			.g = 25,		.b = 0,		}, /* green */
+	{ .r = 0,			.g = 0,			.b = 25,	}, /* blue */
+	{ .r = 25,			.g = 17,		.b = 0,		}, /* orange */
+	{ .r = 0,			.g = 0,			.b = 0,		}, /* black */
+};
+
+enum blink_type_index {
+	ACTIVE,
+	BACKGROUND,
+};
 
 #define SHORT_BLINK		CONFIG_LED_MODULE_BLINK_DURATION_SHORT_MSEC
 #define MEDIUM_BLINK	CONFIG_LED_MODULE_BLINK_DURATION_MEDIUM_MSEC
@@ -93,25 +87,16 @@ void led_blink_once(int blink_length_msec, led_color_t color)
 	k_sleep(K_MSEC((int)(blink_length_msec/2.0)));
 }
 
+/**
+ * @brief Blink the LED with a number of repeats, length and color-
+ * 		The black period is always half the length of the blink length.
+ * 
+ * @param num_blinks Number of times to blink the LED
+ * @param blink_length_msec msec the LED should blink
+ * @param color color to blink the LED
+ */
 void led_blink(int num_blinks, int blink_length_msec, led_color_t color)
 {
-	// set_light_color(color);
-	// k_sleep(K_MSEC(blink_length_msec));
-	// set_light_color(BLACK)
-	// // k_sleep(K_MSEC((int)(blink_length_msec/2.0)));
-	// struct led_msg_data msg;
-	// if (num_blinks == BLINK_INDEFINITE)
-	// {
-	// 	msg.num_blinks = num_blinks;
-	// } else if (num_blinks == 0) {
-	// 	return;
-	// } else {
-	// 	msg.num_blinks = num_blinks-1;
-	// }
-	// msg.blink_duration_msec = blink_length_msec;
-	// msg.blink_color = color;
-
-	// int err = module_enqueue_msg_with_delay(&self, &msg);
 	for (int i = 0; i < num_blinks; i++)
 	{
 		set_light_color(color);
@@ -123,6 +108,13 @@ void led_blink(int num_blinks, int blink_length_msec, led_color_t color)
 }
 
 /*================= EVENT HANDLERS =================*/
+
+/**
+ * @brief Mapping for blinking Bluetooth peer events
+ * 
+ * @param event bluetooth peer event
+ * @return struct led_msg_data color, number of blinks and length to blink
+ */
 static struct led_msg_data blink_data_from_peer_event(const struct ble_peer_event *event)
 {
 	struct led_msg_data blink_data;
@@ -158,7 +150,12 @@ static struct led_msg_data blink_data_from_peer_event(const struct ble_peer_even
 	return blink_data;
 }
 
-
+/**
+ * @brief Mapping for bluetooth search events and blinking
+ *
+ * @param event CAF ble peer search event
+ * @return struct led_msg_data color, number of blinks and length to blink
+ */
 static struct led_msg_data blink_data_from_peer_search_event(const struct ble_peer_search_event *event)
 {
 	struct led_msg_data blink_data;
@@ -176,6 +173,13 @@ static struct led_msg_data blink_data_from_peer_search_event(const struct ble_pe
 	return blink_data;
 }
 
+/**
+ * @brief Main event handler for module
+ * 
+ * @param aeh one of the subscribed events
+ * @return true the event is consumed
+ * @return false the event is not consumed (default)
+ */
 static bool app_event_handler(const struct app_event_header *aeh)
 {
 	struct led_msg_data msg = {0};
@@ -234,6 +238,10 @@ static int setup(void)
 	return 0;
 }
 
+/**
+ * @brief Main thread of module. Receives messages and blinks.
+ * 
+ */
 static void module_thread_fn(void)
 {
 
@@ -271,7 +279,6 @@ static void module_thread_fn(void)
 		remaining_blinks--;
 	}
 }
-
 
 K_THREAD_DEFINE(led_module_thread, CONFIG_LED_MODULE_THREAD_STACK_SIZE,
 		module_thread_fn, NULL, NULL, NULL,

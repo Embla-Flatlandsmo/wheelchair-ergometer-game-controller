@@ -23,52 +23,6 @@
 extern "C" {
 #endif
 
-/** @brief Macro that checks if an event is of a certain type.
- *
- * @param _ptr Name of module message struct variable.
- * @param _mod Name of module that the event corresponds to.
- * @param _evt Name of the event.
- *
- * @return true if the event matches the event checked for, otherwise false.
- */
-#define IS_EVENT(_ptr, _mod, _evt) \
-		is_ ## _mod ## _module_event(&_ptr->module._mod.header) &&		\
-		_ptr->module._mod.type == _evt
-
-/** @brief Macro used to submit an event.
- *
- * @param _mod Name of module that the event corresponds to.
- * @param _type Name of the type of event.
- */
-#define SEND_EVENT(_mod, _type)								\
-	struct _mod ## _module_event *event = new_ ## _mod ## _module_event();		\
-	event->type = _type;								\
-	APP_EVENT_SUBMIT(event)
-
-/** @brief Macro used to submit an error event.
- *
- * @param _mod Name of module that the event corresponds to.
- * @param _type Name of the type of error event.
- * @param _error_code Error code.
- */
-#define SEND_ERROR(_mod, _type, _error_code)						\
-	struct _mod ## _module_event *event = new_ ## _mod ## _module_event();		\
-	event->type = _type;								\
-	event->data.err = _error_code;							\
-	APP_EVENT_SUBMIT(event)
-
-/** @brief Macro used to submit an shutdown event.
- *
- * @param _mod Name of module that the event corresponds to.
- * @param _type Name of the type of shutdown event.
- * @param _id ID of the module that acknowledges the shutdown.
- */
-#define SEND_SHUTDOWN_ACK(_mod, _type, _id)						\
-	struct _mod ## _module_event *event = new_ ## _mod ## _module_event();		\
-	event->type = _type;								\
-	event->data.id = _id;								\
-	APP_EVENT_SUBMIT(event)
-
 /** @brief Structure that contains module metadata. */
 struct module_data {
 	/* Variable used to construct a linked list of module metadata. */
@@ -130,34 +84,4 @@ int module_enqueue_msg(struct module_data *module, void *msg);
  *  @return 0 if successful, otherwise a negative error code.
  */
 int module_enqueue_msg_with_delay(struct module_data *module, void *msg, k_timeout_t delay_msec);
-
-
-
-/** @brief Register that a module has performed a graceful shutdown.
- *
- *  @param[in] id_reg Identifier of module.
- *
- *  @return true If this API has been called for all modules supporting graceful shutdown in the
- *	    application.
- */
-bool modules_shutdown_register(uint32_t id_reg);
-
-/** @brief Register and start a module.
- *
- *  @param[in] module Pointer to a structure containing module metadata.
- *
- *  @return 0 if successful, otherwise a negative error code.
- */
-int module_start(struct module_data *module);
-
-/** @brief Get the number of active modules in the application.
- *
- *  @return Number of active modules in the application.
- */
-uint32_t module_active_count_get(void);
-
-/**
- *@}
- */
-
 #endif /* _MODULES_COMMON_H_ */

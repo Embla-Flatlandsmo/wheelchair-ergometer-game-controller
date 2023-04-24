@@ -14,11 +14,6 @@
 		line-a-gpios = <&gpio0 13 (GPIO_ACTIVE_LOW) >; /* SCK */
 		line-b-gpios = <&gpio0 15 (GPIO_ACTIVE_LOW) >; /* MO */
 		/* use SPI pins because they are HS on the right side... */
-		// line-a-gpios = <&gpio1 8 0>; /* D7, fried */ 
-		// line-b-gpios = <&gpio0 7 0>; /* D9 */
-
-		// line-a-gpios = <&gpio0 26 0>; /* D11 */
-		// line-b-gpios = <&gpio0 5 0>; /* D10 */
 		ticks-per-rotation = <16>;
 	};
 

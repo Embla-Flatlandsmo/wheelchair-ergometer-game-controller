@@ -10,7 +10,7 @@ set(BOARD adafruit_itsybitsy_nrf52840)
 set(APPLICATION_CONFIG_DIR "configuration/\${BOARD}")
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 # find_package(Zephyr)
-project(asset_tracker_v2)
+project(wheelchair_ergometer_game_controller)
 
 # The application uses the configuration/<board> scheme for configuration files.
 

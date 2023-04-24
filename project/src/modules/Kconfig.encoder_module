@@ -10,7 +10,7 @@ config ENCODER_TIMEOUT_DURATION_MSEC
 
 config ENCODER_DELTA_TIME_MSEC
 	int "Measuring interval in milliseconds. Used to deduct speed from encoder travel."
-	default 100
+	default 50
 	help
 		"Larger values means there is less susceptibility 
 		to noise but the system might not pick up actual readings"
@@ -20,7 +20,7 @@ config ENCODER_MOVING_AVERAGE_ALPHA
 	default 200
 
 config ENCODER_SIMULATE_INPUT
-	bool "Simulates inputs in the case of no encoders available"
+	bool "Simulates inputs in the case of no encoders being available"
 
 if ENCODER_SIMULATE_INPUT
 

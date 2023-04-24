@@ -5,6 +5,5 @@
 #
 
 target_sources(app PRIVATE
-		${CMAKE_CURRENT_SOURCE_DIR}/encoder_module_event.c
-		   
+		${CMAKE_CURRENT_SOURCE_DIR}/encoder_module_event.c   
 )
