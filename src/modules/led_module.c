@@ -139,7 +139,7 @@ static struct led_msg_data blink_data_from_peer_event(const struct ble_peer_even
 		case PEER_STATE_CONN_FAILED:
 			blink_data.blink_color = RED;
 			blink_data.num_blinks = 5;
-			blink_data.blink_duration_msec = SHORT_BLINK;
+			blink_data.blink_duration_msec = MEDIUM_BLINK;
 			break;
 		default:
 			blink_data.blink_color = BLACK;
