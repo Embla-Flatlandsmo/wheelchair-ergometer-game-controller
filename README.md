@@ -1,6 +1,9 @@
-# Wheelchair ergometer game controller
+# Wheelchair Ergometer Game Controller
 
 This project interfaces an Invictus Trainer with a computer or a phone by using encoders and an nRF52840.
+
+<img src="images/gameplay_demo.jpg" width="500">
+
 
 ## Installing the SDK
 The project uses the [Zephyr RTOS](https://docs.zephyrproject.org/latest/) and the [nRF Connect SDK](https://developer.nordicsemi.com/nRF_Connect_SDK/doc/2.1.2/nrf/index.html). To get started, you must download the nRF Connect SDK which comes with the Zephyr RTOS included: [See the installation guide for a how-to](https://developer.nordicsemi.com/nRF_Connect_SDK/doc/2.1.2/nrf/gs_assistant.html)
@@ -60,7 +63,12 @@ adafruit-nrfutil dfu serial --package dfu-package.zip --port COMxx -b 115200
 - Navigate to folder containing firmware for the microcontroller you want to work with (```./balancing_robot_firmware/<MCU NAME>```) and use west commands for building and flashing the firmware as described in the [developer guide](https://developer.nordicsemi.com/nRF_Connect_SDK/doc/1.9.0/zephyr/guides/west/build-flash-debug.html#west-build-flash-debug). 
 -->
 ## Controller Configuration types
-In this project you must choose either `CONFIG_HID_MODULE_CONTROLLER_OUTPUT_A=y`or `CONFIG_HID_MODULE_CONTROLLER_OUTPUT_B=y`. 
+In this project you must choose either `CONFIG_HID_MODULE_CONTROLLER_OUTPUT_A=y`or `CONFIG_HID_MODULE_CONTROLLER_OUTPUT_B=y`. Which controller you choose is based on what you want the ergometer to output. I have only used Config A but Config B might be useful for some purposes!
+
+<img src="images/gamepad_config_a.png" width="300"> <img src="images/gamepad_config_b.png" width="300">
+
+
+
 
 ## Connecting to the device
 On startup, the device will perform Bluetooth advertisement. It should be found in the pairing menu like you can most normal Bluetooth devices. It is named `Wheelchair Ergometer` and uses Bluetooth LE (4.0).
