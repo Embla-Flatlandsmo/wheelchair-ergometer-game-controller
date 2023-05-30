@@ -1,8 +1,8 @@
 # Wheelchair Ergometer Game Controller
 
-This project interfaces an Invictus Trainer with a computer or a phone by using encoders and an nRF52840.
+This project interfaces an Invictus Trainer with a computer or a phone by using encoders and an nRF52840. The video shows a gameplay demo, where you can see what the player sees on the screen to the left of the player.
 
-<img src="images/gameplay_demo.jpg" width="500">
+<img src="images/video-demo.gif" width="500">
 
 
 ## Installing the SDK
